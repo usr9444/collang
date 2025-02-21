@@ -1,0 +1,4 @@
+func Entry(): int 
+{
+	ret 0;
+}

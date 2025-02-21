@@ -1,0 +1,3 @@
+# Collang
+
+A programming language.
