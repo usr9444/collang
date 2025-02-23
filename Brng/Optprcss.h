@@ -1,5 +1,5 @@
-#ifndef OPTPRCSS_H_
-#define OPTPRCSS_H_
+#ifndef Optprcss_H_
+#define Optprcss_H_
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -531,4 +531,4 @@ _tCmdOpt *_tOptPrcss_opt_(tOptPrcss *optPrcss, char const *idntf)
 	return NULL;
 }
 #define tOptPrcss_opt(optPrcss, idntf) _tOptPrcss_opt_(&optPrcss, idntf)
-#endif/*OPTPRCSS_H_*/
+#endif/*Optprcss_H_*/

@@ -13,6 +13,9 @@ static struct _tArrBffr_ _tArrBffr_construct_(void)
 static void _tArrBffr_destruct_(struct _tArrBffr_ *bffr)
 {
 	if (bffr->bffr != NULL) free((void *)bffr->bffr);
+	bffr->cpcty = 0LLU;
+	bffr->len = 0LLU;
+	bffr->bffr = NULL;
 }
 static int _tArrBffr_addCh_(struct _tArrBffr_ *bffr, char const ch)
 {
@@ -61,7 +64,7 @@ static void _tTkns_destruct_(struct _tTkns_ *tkns)
 		free((void *)tkns->tkns);
 	}
 }
-static int _tTkns_addTkn_(struct _tTkns_ *tkns, enum eTokens type, long long unsigned ln, long long unsigned pos, struct _tArrBffr_ *bffr)
+static int _tTkns_addTkn_(struct _tTkns_ *tkns, enum eTkns type, long long unsigned const ln, long long unsigned const pos, struct _tArrBffr_ *bffr)
 {
 	struct _tTkn_ tkn = (struct _tTkn_){.pos = pos, .ln = ln, .type = type};
 	tkn.bffr = (struct _tArrBffr_){.bffr = NULL, .cpcty = 0LLU, .len = 0LLU};
@@ -92,12 +95,11 @@ static int _tTkns_addTkn_(struct _tTkns_ *tkns, enum eTokens type, long long uns
 	tkns->tkns[tkns->len++] = tkn;
 	return 0;
 }
-//TODO(Me): Make a nicer parsing error printer tied to this structure.
 tScnnr tScnnr_construct(char const *fileName, FILE *filePtr)
 {
 	tScnnr scnnr;
 	scnnr.ch = EOF;
-	scnnr.curr = 0;
+	scnnr.crrnt = 0;
 	scnnr.fileName = fileName;
 	scnnr.ln = 1;
 	scnnr.strt = 0;
@@ -109,35 +111,39 @@ void _tScnnr_destruct_(tScnnr *scnnr)
 {
 	_tTkns_destruct_(&scnnr->tkns);
 }
-static int _tScnnr_addTkn_(tScnnr *scnnr, enum eTokens type, long long unsigned ln, long long unsigned pos, struct _tArrBffr_ *bffr)
+static void _tScnnr_printErr_(tScnnr const *scnnr, char const *hnt)
 {
-	int err = _tTkns_addTkn_(&scnnr->tkns, type, ln, pos, bffr);
-	if (err != 0) fprintf(stderr, "Err: Failed to add _tTkn_ in file '%s' on line %llu at pos %llu.\n", scnnr->fileName, scnnr->ln, scnnr->curr);
+	fprintf(stderr, "Err: Failed while parsing token in file '%s' on line %llu at pos %llu (started at pos %llu).\n", scnnr->fileName, scnnr->ln, scnnr->crrnt, scnnr->strt);
+	if (hnt != NULL) fprintf(stderr, "Exp: %s.\n", hnt);
+}
+static int _tScnnr_addTkn_(tScnnr *scnnr, enum eTkns type, struct _tArrBffr_ *bffr)
+{
+	int err = _tTkns_addTkn_(&scnnr->tkns, type, scnnr->ln, scnnr->strt, bffr);
+	if (err != 0) _tScnnr_printErr_(scnnr, "Could not allocate memory for token");
 	return err;
 }
-#define tScnnr_addTkn_s(scnnr, type, ln, pos, lit) \
+#define tScnnr_addTkn_s(scnnr, type, lit) \
 	{ \
-		int err = _tScnnr_addTkn_(scnnr, type, ln, pos, lit); \
+		int err = _tScnnr_addTkn_(scnnr, type, lit); \
 		if (err != 0) \
 		{ \
-			fprintf(stderr, "Err: Failed while parsing token in '%s'.\n", scnnr->fileName); \
 			_tScnnr_destruct_(scnnr); \
 			return err; \
 		} \
 	}
 static char _tScnnr_nxt_(tScnnr *scnnr)
 {
-	++scnnr->curr;
+	++scnnr->crrnt;
 	scnnr->ch = getc(scnnr->filePtr);
 	return scnnr->ch;
 }
-static char _tScnnr_ahd_(tScnnr *scnnr)
+static char _tScnnr_ahd_(tScnnr const *scnnr)
 {
 	char const ch = getc(scnnr->filePtr);
 	ungetc(ch, scnnr->filePtr);
 	return ch;
 }
-static char _tScnnr_ahd2_(tScnnr *scnnr)
+static char _tScnnr_ahd2_(tScnnr const *scnnr)
 {
 	char const ch1 = getc(scnnr->filePtr);
 	char ch2 = EOF;
@@ -169,6 +175,11 @@ inline static bool _isB16Digit_(char const ch)
 {
 	return ((ch <= 'F' && ch >= 'A') || (ch <= 'f' && ch >= 'a')) || _isB10Digit_(ch);
 }
+inline static char _dgtsToChr_(char *dgts, const int unsigned bas)
+{
+	static char *invalidChr = NULL;
+	return (char)strtoul(dgts, &invalidChr, bas);
+}
 inline static bool _isNumTypeHint_(char const ch)
 {
 	return ch == 'B' || ch == 'b' || ch == 'O' || ch == 'o' || ch == 'H' || ch == 'h' || ch == 'F' || ch == 'f' || ch == '.';
@@ -193,7 +204,7 @@ static int _tScnnr_parseWord_(tScnnr *scnnr)
 			return err;
 		}
 	}
-	enum eTokens tknType = eT_Err;
+	enum eTkns tknType = eT_Err;
 	if (strncmp(bffr.bffr, "and", (4 >= bffr.len) ? 4 : bffr.len) == 0) tknType = eT_And;
 	else if (strncmp(bffr.bffr, "for", (4 >= bffr.len) ? 4 : bffr.len) == 0) tknType = eT_For;
 	else if (strncmp(bffr.bffr, "or", (3 >= bffr.len) ? 3 : bffr.len) == 0) tknType = eT_Or;
@@ -202,9 +213,19 @@ static int _tScnnr_parseWord_(tScnnr *scnnr)
 	else if (strncmp(bffr.bffr, "while", (6 >= bffr.len) ? 6 : bffr.len) == 0) tknType = eT_While;
 	else if (strncmp(bffr.bffr, "ret", (4 >= bffr.len) ? 4 : bffr.len) == 0) tknType = eT_Ret;
 	else if (strncmp(bffr.bffr, "brk", (4 >= bffr.len) ? 4 : bffr.len) == 0) tknType = eT_Brk;
-	else if (strncmp(bffr.bffr, "None", (4 >= bffr.len) ? 4 : bffr.len) == 0) tknType = eT_None;
+	else if (strncmp(bffr.bffr, "None", (5 >= bffr.len) ? 5 : bffr.len) == 0) tknType = eT_None;
+	else if (strncmp(bffr.bffr, "True", (5 >= bffr.len) ? 5 : bffr.len) == 0) tknType = eT_True;
+	else if (strncmp(bffr.bffr, "False", (6 >= bffr.len) ? 6 : bffr.len) == 0) tknType = eT_False;
+	else if (strncmp(bffr.bffr, "fnc", (4 >= bffr.len) ? 4 : bffr.len) == 0) tknType = eT_Fnc;
+	else if (strncmp(bffr.bffr, "infr", (5 >= bffr.len) ? 5 : bffr.len) == 0) tknType = eT_Infr;
+	else if (strncmp(bffr.bffr, "rmbr", (5 >= bffr.len) ? 5 : bffr.len) == 0) tknType = eT_Rmbr;
 	else tknType = eT_Id;
-	return _tScnnr_addTkn_(scnnr, tknType, scnnr->ln, scnnr->strt, &bffr);
+	if (tknType == eT_Id) return _tScnnr_addTkn_(scnnr, tknType, &bffr);
+	else
+	{
+		_tArrBffr_destruct_(&bffr);
+		return _tScnnr_addTkn_(scnnr, tknType, &bffr);
+	}
 }
 static int _tScnnr_parseStrng_(tScnnr *scnnr)
 {
@@ -213,25 +234,85 @@ static int _tScnnr_parseStrng_(tScnnr *scnnr)
 	{
 		if (ch == '\n' || ch == '\r' || ch == EOF)
 		{
-			fprintf(stderr, "Err: Unterminated string in file '%s' on line %llu at pos %llu.\n", scnnr->fileName, scnnr->ln, scnnr->strt);
+			_tScnnr_printErr_(scnnr, "Unterminated string");
 			_tArrBffr_destruct_(&bffr);
 			return 1;
 		}
-		int err = _tArrBffr_addCh_(&bffr, _tScnnr_nxt_(scnnr));
+		if (ch == '\\')
+		{
+			_tScnnr_nxt_(scnnr);
+			char const chck = _tScnnr_ahd_(scnnr);
+			if (chck == '0') ch = '\0';
+			else if (chck == 'a') ch = '\a';
+			else if (chck == 'b') ch = '\b';
+			else if (chck == 't') ch = '\t';
+			else if (chck == 'n') ch = '\n';
+			else if (chck == 'v') ch = '\v';
+			else if (chck == 'f') ch = '\f';
+			else if (chck == 'r') ch = '\r';
+			else if (chck == '\\' || chck == '\"' || chck == '\'') ch = chck;
+			else if (chck == 'H' || chck == 'h')
+			{
+				_tScnnr_nxt_(scnnr);
+				char dig[3LLU] = {0, 0, 0};
+				for (long long unsigned idx = 0LLU; idx < 2LLU; ++idx)
+				{
+					char const chck2 = _tScnnr_nxt_(scnnr);
+					if (_isB16Digit_(chck2) == false)
+					{
+						_tScnnr_printErr_(scnnr, "Invalid escaped hex digit");
+						_tArrBffr_destruct_(&bffr);
+						return 1;
+					}
+					dig[idx] = chck2;
+				}
+				ch = _dgtsToChr_(dig, 16LLU);
+				goto Skp;
+			}
+			else if (chck == 'O' || chck == 'o')
+			{
+				_tScnnr_nxt_(scnnr);
+				char dig[4LLU] = {0, 0, 0, 0};
+				for (long long unsigned idx = 0LLU; idx < 3LLU; ++idx)
+				{
+					char const chck2 = _tScnnr_nxt_(scnnr);
+					if (_isB8Digit_(chck2) == false)
+					{
+						_tScnnr_printErr_(scnnr, "Invalid escaped octal digit");
+						_tArrBffr_destruct_(&bffr);
+						return 1;
+					}
+					dig[idx] = chck2;
+				}
+				ch = _dgtsToChr_(dig, 8U);
+				goto Skp;
+			}
+			//TODO(Me): Add unicode '\uHHHH' and '\UHHHHHHHH' support.
+			else
+			{
+				_tScnnr_printErr_(scnnr, "Unknown escape character");
+				_tArrBffr_destruct_(&bffr);
+				return 1;
+			}
+			_tScnnr_nxt_(scnnr);
+Skp:	(void)0;
+		}
+		else ch = _tScnnr_nxt_(scnnr);
+		int err = _tArrBffr_addCh_(&bffr, ch);
 		if (err != 0)
 		{
 			_tArrBffr_destruct_(&bffr);
 			return err;
 		}
 	}
-	return _tScnnr_addTkn_(scnnr, eT_Strng, scnnr->ln, scnnr->strt, &bffr);
+	return _tScnnr_addTkn_(scnnr, eT_Strng, &bffr);
 }
 static int _tScnnr_parseNum_(tScnnr *scnnr)
 {
 
 	struct _tArrBffr_ bffr = _tArrBffr_construct_();
 	bool hasDot = scnnr->ch == '.';
-	enum eTokens tknType = hasDot == true ? eT_Dbl : eT_Err;
+	enum eTkns tknType = hasDot == true ? eT_Dbl : eT_Err;
 	int err = _tArrBffr_addCh_(&bffr, scnnr->ch);
 	if (err != 0)
 	{
@@ -242,7 +323,7 @@ static int _tScnnr_parseNum_(tScnnr *scnnr)
 	{
 		if (tknType == eT_Flt && (ch == 'F' || ch == 'f'))
 		{
-			fprintf(stderr, "Err: Multiple floating type declarations ('F') present in floating point number in file '%s' on line %llu at pos %llu.\n", scnnr->fileName, scnnr->ln, scnnr->curr);
+			_tScnnr_printErr_(scnnr, "Multiple floating type declarations ('F') present in floating point number");
 			_tArrBffr_destruct_(&bffr);
 			return 1;
 		}
@@ -250,7 +331,7 @@ static int _tScnnr_parseNum_(tScnnr *scnnr)
 		{
 			if (hasDot == true)
 			{
-				fprintf(stderr, "Err: Multiple decimal points present in floating point number in file '%s' on line %llu at pos %llu.\n", scnnr->fileName, scnnr->ln, scnnr->curr);
+				_tScnnr_printErr_(scnnr, "Multiple decimal points present in floating point number");
 				_tArrBffr_destruct_(&bffr);
 				return 1;
 			}
@@ -282,7 +363,7 @@ static int _tScnnr_parseNum_(tScnnr *scnnr)
 		{
 			if (_isB2Digit_(bffr.bffr[idx]) == false)
 			{
-				fprintf(stderr, "Err: Invalid digit '%c' (not of base 2) in number '%s' from file '%s' on line %llu at pos %llu.\n", bffr.bffr[idx], bffr.bffr, scnnr->fileName, scnnr->ln, scnnr->curr);
+				_tScnnr_printErr_(scnnr, "Invalid digit (not of base 2) in number");
 				_tArrBffr_destruct_(&bffr);
 				return 1;
 			}
@@ -291,7 +372,7 @@ static int _tScnnr_parseNum_(tScnnr *scnnr)
 		{
 			if (_isB8Digit_(bffr.bffr[idx]) == false)
 			{
-				fprintf(stderr, "Err: Invalid digit '%c' (not of base 8) in number '%s' from file '%s' on line %llu at pos %llu.\n", bffr.bffr[idx], bffr.bffr, scnnr->fileName, scnnr->ln, scnnr->curr);
+				_tScnnr_printErr_(scnnr, "Invalid digit (not of base 8) in number");
 				_tArrBffr_destruct_(&bffr);
 				return 1;
 			}
@@ -300,7 +381,7 @@ static int _tScnnr_parseNum_(tScnnr *scnnr)
 		{
 			if (_isB10Digit_(bffr.bffr[idx]) == false)
 			{
-				fprintf(stderr, "Err: Invalid digit '%c' (not of base 10) in number '%s' from file '%s' on line %llu at pos %llu.\n", bffr.bffr[idx], bffr.bffr, scnnr->fileName, scnnr->ln, scnnr->curr);
+				_tScnnr_printErr_(scnnr, "Invalid digit (not of base 10) in number");
 				_tArrBffr_destruct_(&bffr);
 				return 1;
 			}
@@ -309,7 +390,7 @@ static int _tScnnr_parseNum_(tScnnr *scnnr)
 		{
 			if (_isB16Digit_(bffr.bffr[idx]) == false)
 			{
-				fprintf(stderr, "Err: Invalid digit '%c' (not of base 16) in number '%s' from file '%s' on line %llu at pos %llu.\n", bffr.bffr[idx], bffr.bffr, scnnr->fileName, scnnr->ln, scnnr->curr);
+				_tScnnr_printErr_(scnnr, "Invalid digit (not of base 16) in number");
 				_tArrBffr_destruct_(&bffr);
 				return 1;
 			}
@@ -318,7 +399,7 @@ static int _tScnnr_parseNum_(tScnnr *scnnr)
 		{
 			if (_isB10Digit_(bffr.bffr[idx]) == false && bffr.bffr[idx] != '.')
 			{
-				fprintf(stderr, "Err: Invalid digit '%c' (not of double floating point type) in number '%s' from file '%s' on line %llu at pos %llu.\n", bffr.bffr[idx], bffr.bffr, scnnr->fileName, scnnr->ln, scnnr->curr);
+				_tScnnr_printErr_(scnnr, "Invalid digit (not of base 10) in floating point number");
 				_tArrBffr_destruct_(&bffr);
 				return 1;
 			}
@@ -328,7 +409,7 @@ static int _tScnnr_parseNum_(tScnnr *scnnr)
 			if (_isB10Digit_(bffr.bffr[idx]) == false && bffr.bffr[idx] != '.')
 			{
 				if ((idx == bffr.len - 1) && (bffr.bffr[idx] == 'F' || bffr.bffr[idx] == 'f')) continue;
-				fprintf(stderr, "Err: Invalid digit '%c' (not of floating point type) in file '%s' on line %llu at pos %llu.\n", bffr.bffr[idx], scnnr->fileName, scnnr->ln, scnnr->curr);
+				_tScnnr_printErr_(scnnr, "Invalid digit (not of base 10) in floating point number");
 				_tArrBffr_destruct_(&bffr);
 				return 1;
 			}
@@ -336,29 +417,29 @@ static int _tScnnr_parseNum_(tScnnr *scnnr)
 	}
 	if (tknType == eT_Err)
 	{
-		fprintf(stderr, "Err: Invalid number in file '%s' on line %llu at pos %llu. This point should be unreachable.\n", scnnr->fileName, scnnr->ln, scnnr->curr);
+		_tScnnr_printErr_(scnnr, "Invalid number");
 		_tArrBffr_destruct_(&bffr);
 		return 1;
 	}
-	return _tScnnr_addTkn_(scnnr, tknType, scnnr->ln, scnnr->strt, &bffr);
+	return _tScnnr_addTkn_(scnnr, tknType, &bffr);
 }
 int _tScnnr_parse_(tScnnr *scnnr)
 {
 	for (_tScnnr_nxt_(scnnr); scnnr->ch != EOF; _tScnnr_nxt_(scnnr))
 	{
-		scnnr->strt = scnnr->curr;
-		enum eTokens tknType = eT_Err;
+		scnnr->strt = scnnr->crrnt;
+		enum eTkns tknType = eT_Err;
 		if (scnnr->ch == '\n')
 		{
 			++scnnr->ln;
-			scnnr->curr = 0;
+			scnnr->crrnt = 0;
 			continue;
 		}
 		else if (scnnr->ch == '\t') continue;
 		else if (scnnr->ch == ' ') continue;
 		else if (scnnr->ch == '\r')
 		{
-			scnnr->curr = 0;
+			scnnr->crrnt = 0;
 			continue;
 		}
 		else if (scnnr->ch == '(') tknType = eT_LPrnth;
@@ -425,7 +506,6 @@ int _tScnnr_parse_(tScnnr *scnnr)
 		{
 			if (_tScnnr_parseStrng_(scnnr) != 0)
 			{
-				fprintf(stderr, "Err: Invalid string in file '%s' on line %llu at pos %llu.\n", scnnr->fileName, scnnr->ln, scnnr->curr);
 				_tScnnr_destruct_(scnnr);
 				return 1;
 			}
@@ -536,7 +616,31 @@ int _tScnnr_parse_(tScnnr *scnnr)
 		else if (scnnr->ch == '#') tknType = eT_She;
 		else if (scnnr->ch == '$') tknType = eT_Dlr;
 		else if (scnnr->ch == '\\') tknType = eT_BSlsh;
-		else if (scnnr->ch == '"') tknType = eT_Quot;
+		else if (scnnr->ch == '"')
+		{
+			long long unsigned ln = scnnr->ln, crrnt = scnnr->crrnt;
+			do
+			{
+				_tScnnr_nxt_(scnnr);
+				if (scnnr->ch == EOF)
+				{
+					fprintf(stderr, "Err: Failed while parsing token in file '%s' on line %llu at pos %llu.\nExp: Unterminated comment.\n", scnnr->fileName, ln, crrnt);
+					_tScnnr_destruct_(scnnr);
+					return 1;
+				}
+				else if (scnnr->ch == '\n')
+				{
+					++scnnr->ln;
+					scnnr->crrnt = 0;
+				}
+				else if (scnnr->ch == '\r')
+				{
+					scnnr->crrnt = 0;
+				}
+			}
+			while (scnnr->ch != '"');
+			continue;
+		}
 		else if (_isIdChar_(scnnr->ch))
 		{
 			if (_tScnnr_parseWord_(scnnr) != 0)
@@ -557,19 +661,13 @@ int _tScnnr_parse_(tScnnr *scnnr)
 		}
 		if (tknType != eT_Err)
 		{
-			tScnnr_addTkn_s(scnnr, tknType, scnnr->ln, scnnr->strt, NULL);
+			tScnnr_addTkn_s(scnnr, tknType, NULL);
 		}
 		else
 		{
-			fprintf(stderr, "Err: Unrecognized token '%c' in file '%s' on line %llu at pos %llu.\n", scnnr->ch, scnnr->fileName, scnnr->ln, scnnr->curr);
 			_tScnnr_destruct_(scnnr);
 			return 1;
 		}
-	}
-	for (long long unsigned idx = 0; idx < scnnr->tkns.len; ++idx)
-	{
-		if (scnnr->tkns.tkns[idx].bffr.cpcty == 0) fprintf(stdout, "_tTkn_(%d, %llu, %llu)\n", scnnr->tkns.tkns[idx].type, scnnr->tkns.tkns[idx].ln, scnnr->tkns.tkns[idx].pos);
-		else fprintf(stdout, "_tTkn_(%d, %llu, %llu, %s)\n", scnnr->tkns.tkns[idx].type, scnnr->tkns.tkns[idx].ln, scnnr->tkns.tkns[idx].pos, scnnr->tkns.tkns[idx].bffr.bffr);
 	}
 	return 0;
 }

@@ -43,7 +43,6 @@
 #
 $
 \
-"
 and
 or
 if
@@ -52,9 +51,14 @@ for
 while
 ret
 brk
+None
+True
+False
+fnc
+infr
+rmbr
 a
 _a1
-None
 none
 'This should be a string'
 'None'
@@ -84,3 +88,7 @@ none
 1.F
 000000.1
 'Escape\n'
+'\'This should be between quotes\''
+"This should be a comment"
+'Hex\H0A'
+'Octal\O012'

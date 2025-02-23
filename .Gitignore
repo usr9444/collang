@@ -1,3 +1,4 @@
 Bld/*
 *.bat
 *.sh
+.vscode/*

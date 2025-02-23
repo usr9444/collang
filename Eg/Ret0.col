@@ -1,4 +1,5 @@
-func Entry(): int 
+fnc Entry(): int 
 {
+	prnt 'Hello, World!\n'
 	ret 0;
 }
