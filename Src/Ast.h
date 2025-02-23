@@ -1,112 +1,52 @@
 #ifndef Ast_H_
 #define Ast_H_
-#include "stdbool.h"
 #include "Scanning.h"
 enum _eNd_
 {
 	eN_Err,
 	/*Basic*/
 	eN_Int,
-	eN_Flt,
-	eN_Dbl,
-	eN_Bln,
-	eN_Str,
-	eN_Type,
-	/*Control flow*/
-	eN_For,		// "for" "(" eN_Expr ";" eN_Expr ";" eN_Expr ")" "{" eN_StmntLst "}"
-	eN_While, 	// "while" "(" eN_Expr ")" "{" eN_StmntLst "}"
-	/*Definitions*/
-	eN_FncDec, 	// "fnc" eN_Idnt "(" ")" ":" eN_Type ";"
-	eN_FncDef, 	// "fnc" eN_Idnt "(" ")" ":" eN_Type "{" eN_StmntLst "}"
-	eN_Call, 	// eN_Idnt "(" ")"
 };
-struct _AstNd_
+struct _tAstNd_
 {
 	enum _eNd_ type;
+	long long unsigned ln, pos;
 	union _uDat_
 	{
-		struct _tBOp_
-		{
-			enum eTkns op;
-			struct _AstNd_ *lhs;
-			struct _AstNd_ *rhs;
-		}
-		bOp;
 		struct _tUOp_
 		{
-			enum eTkns op;
-			struct _AstNd_ *oprnd;
+			enum eTkns type;
+			struct _tAstNd_ *oprnd;
 		}
 		uOp;
-		struct _tAssgn_
-		{
-			char *idntf;
-			struct _AstNd_ *expr;
-		}
-		assgn;
-		struct _tCall_
-		{
-			char *idntf;
-			// Args
-		}
-		call;
-		struct _tRet_
-		{
-			struct _AstNd_ *expr;
-		}
-		ret;
-		struct _tId_
-		{
-			char *name;
-		}
-		id;
 		struct _tConst_
 		{
 			enum eTkns type;
-			union _uDat_
+			struct _tDat_
 			{
 				long long unsigned Llu;
 				double Dbl;
-				float Flt;
 				char *Txt;
-				bool Bln;
+				float Flt;
 			}
-			val;
+			dat;
 		}
 		cnst;
-		struct _tFncDec_
-		{
-			char *name;
-			enum eTkns retType;
-			// Params
-		}
-		fncDec;
-		struct _tFncDef_
-		{
-			char *name;
-			// Params
-			struct _AstNd_ *bdy;
-		}
-		fncDef;
-		struct _tBlck_
-		{
-			// Statements
-		}
-		blck;
-		struct tLoop
-		{
-			struct _AstNd_ *cnd;
-			struct _AstNd_ *bdy;
-			struct _AstNd_ *init;	// Only for eN_For
-			struct _AstNd_ *incr;	// Only for eN_For
-		}
-		loop;
-		struct _tType_
-		{
-			enum eTkns type;
-		}
-		typeNd;
 	}
 	dat;
 };
+typedef struct
+{
+	struct _tTkns_ *tkns;
+	struct _tAstNd_ *rt;
+	long long unsigned idx;
+	struct _tTkn_ *crrnt;
+}
+tAst;
+tAst _tAst_construct_(tScnnr *scnnr);
+#define tAst_construct(scnnr) _tAst_construct_(&scnnr)
+void _tAst_destruct_(tAst *ast);
+#define tAst_destruct(ast) _tAst_destruct_(&ast)
+bool _Ast_parse_(tAst *ast);
+#define tAst_parse(ast) _Ast_parse_(&ast)
 #endif/*Ast_H_*/

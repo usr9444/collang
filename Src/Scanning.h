@@ -1,5 +1,6 @@
 #ifndef Scanning_H_
 #define Scanning_H_
+#include <stdio.h>
 enum eTkns
 {
 	eT_Err,

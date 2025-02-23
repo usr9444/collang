@@ -309,7 +309,6 @@ Skp:	(void)0;
 }
 static int _tScnnr_parseNum_(tScnnr *scnnr)
 {
-
 	struct _tArrBffr_ bffr = _tArrBffr_construct_();
 	bool hasDot = scnnr->ch == '.';
 	enum eTkns tknType = hasDot == true ? eT_Dbl : eT_Err;
