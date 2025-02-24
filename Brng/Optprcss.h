@@ -213,7 +213,6 @@ void _tOptPrcss_addOpt_(tOptPrcss *optPrcss, char const *idntf, char const *dsc,
 		void *newPtr = realloc(optPrcss->opts, optPrcss->cpcty * sizeof(_tCmdOpt));
 		if (newPtr == NULL)
 		{
-
 			fprintf(stderr, "Err: Could not reallocate memory for opt.\n");
 			_tOptPrcss_destruct_(optPrcss);
 			return;
@@ -413,7 +412,6 @@ int _tOptPrcss_process_(tOptPrcss *optPrcss, int cnt, char *val[])
 			}
 			if (optPrcss->argCpcty == 0LLU)
 			{
-
 				optPrcss->argv = calloc(++optPrcss->argCpcty, sizeof(char const *));
 				if (optPrcss->argv == NULL)
 				{

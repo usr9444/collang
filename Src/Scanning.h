@@ -105,6 +105,6 @@ tScnnr;
 tScnnr tScnnr_construct(char const *fileName, FILE *filePtr);
 void _tScnnr_destruct_(tScnnr *scnnr);
 #define tScnnr_destruct(scnnr) _tScnnr_destruct_(&scnnr)
-int _tScnnr_parse_(tScnnr *scnnr);
+bool _tScnnr_parse_(tScnnr *scnnr);
 #define tScnnr_parse(scnnr) _tScnnr_parse_(&scnnr)
 #endif/*Scanning_H_*/

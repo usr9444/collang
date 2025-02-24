@@ -6,27 +6,48 @@ enum _eNd_
 	eN_Err,
 	/*Terminal*/
 	eN_Cnst,
+	eN_Idntf,
+	/*Expression*/
+	eN_Assgn,
+	eN_Rssgn,
+	eN_Expr,
+	eN_Stmnt,
+	/*Unary*/
 	eN_Multv,
 	eN_Addtv,
 };
-enum _eNdType_
+enum _eNdInfo_
 {
-	eNT_Err,
+	eNI_Err,
 	/*Constant types*/
-	eNT_Int,
-	eNT_Flt,
-	eNT_Dbl,
-	eNT_Txt,
+	eNI_Bln,
+	eNI_Int,
+	eNI_Flt,
+	eNI_Dbl,
+	eNI_Txt,
+	/*Multiplicative*/
+	eNI_Mult,
+	eNI_Div,
 	/*Additive*/
-	eNT_Mult,
-	eNT_Div,
-	eNT_Add,
-	eNT_Sub,
+	eNI_Add,
+	eNI_Sub,
+	/*Assignments*/
+	eNI_Eq,
+	eNI_AddEq,
+	eNI_SubEq,
+	eNI_MultEq,
+	eNI_DivEq,
+	eNI_LssLssEq,
+	eNI_GrtGrtEq,
+	eNI_BOrEq,
+	eNI_BAndEq,
+	eNI_BNotEq,
+	eNI_PrcntEq,
 };
 struct _tAstNde_
 {
 	enum _eNd_ type;
-	enum _eNdType_ info;
+	enum _eNdInfo_ info;
 	long long unsigned ln, pos;
 	union _uDat_
 	{
@@ -38,14 +59,36 @@ struct _tAstNde_
 		unry;
 		union _uConst_
 		{
+			bool Bln;
 			long long unsigned Llu;
 			double Dbl;
 			char *Txt;
 			float Flt;
 		}
 		cnst;
+		struct _tAstNde_ *expr;
+		struct _tAssgn_
+		{
+			struct _tAstNde_ *lhs;
+			struct _tAstNde_ *rhs;
+			char *datType;
+		}
+		assgn;
+		struct _tRssgn_
+		{
+			struct _tAstNde_ *lhs;
+			struct _tAstNde_ *rhs;
+		}
+		rssgn;
+		char *idntf;
+		struct _tAstNde_ *stmnt;
 	}
 	dat;
+};
+struct _tArrStr_
+{
+	char **strs;
+	long long unsigned cpcty, len;
 };
 typedef struct
 {
@@ -54,6 +97,7 @@ typedef struct
 	long long unsigned idx;
 	struct _tTkn_ *crrnt;
 	char const *fileName;
+	struct _tArrStr_ knwnTypes;
 }
 tAst;
 tAst _tAst_construct_(tScnnr *scnnr);

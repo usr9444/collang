@@ -12,12 +12,16 @@ static struct _tArrBffr_ _tArrBffr_construct_(void)
 }
 static void _tArrBffr_destruct_(struct _tArrBffr_ *bffr)
 {
-	if (bffr->bffr != NULL) free((void *)bffr->bffr);
+	if (bffr == NULL) return;
+	if (bffr->bffr != NULL)
+	{
+		free((void *)bffr->bffr);
+		bffr->bffr = NULL;
+	}
 	bffr->cpcty = 0LLU;
 	bffr->len = 0LLU;
-	bffr->bffr = NULL;
 }
-static int _tArrBffr_addCh_(struct _tArrBffr_ *bffr, char const ch)
+static bool _tArrBffr_addCh_(struct _tArrBffr_ *bffr, char const ch)
 {
 	if (bffr->cpcty == 0LLU)
 	{
@@ -25,7 +29,7 @@ static int _tArrBffr_addCh_(struct _tArrBffr_ *bffr, char const ch)
 		if (bffr->bffr == NULL)
 		{
 			fprintf(stderr, "Err: Could not allocate memory for _tArrBffr_.\n");
-			return 1;
+			return true;
 		}
 	}
 	else if (bffr->len == bffr->cpcty)
@@ -34,14 +38,14 @@ static int _tArrBffr_addCh_(struct _tArrBffr_ *bffr, char const ch)
 		if (newPtr == NULL)
 		{
 			fprintf(stderr, "Err: Could not reallocate memory for _tArrBffr_.\n");
-			return 1;
+			return true;
 		}
 		bffr->bffr = newPtr;
 		bffr->cpcty <<= 1;
 	}
 	bffr->bffr[bffr->len++] = ch;
 	bffr->bffr[bffr->len] = '\0';
-	return 0;
+	return false;
 }
 static struct _tTkns_ _tTkns_construct_(void)
 {
@@ -64,7 +68,7 @@ static void _tTkns_destruct_(struct _tTkns_ *tkns)
 		free((void *)tkns->tkns);
 	}
 }
-static int _tTkns_addTkn_(struct _tTkns_ *tkns, enum eTkns type, long long unsigned const ln, long long unsigned const pos, struct _tArrBffr_ *bffr)
+static bool _tTkns_addTkn_(struct _tTkns_ *tkns, enum eTkns type, long long unsigned const ln, long long unsigned const pos, struct _tArrBffr_ *bffr)
 {
 	struct _tTkn_ tkn = (struct _tTkn_){.pos = pos, .ln = ln, .type = type};
 	tkn.bffr = (struct _tArrBffr_){.bffr = NULL, .cpcty = 0LLU, .len = 0LLU};
@@ -78,7 +82,7 @@ static int _tTkns_addTkn_(struct _tTkns_ *tkns, enum eTkns type, long long unsig
 		if (tkns->tkns == NULL)
 		{
 			fprintf(stderr, "Err: Could not allocate memory for _tTkns_.\n");
-			return 1;
+			return true;
 		}
 	}
 	else if (tkns->len == tkns->cpcty)
@@ -87,13 +91,13 @@ static int _tTkns_addTkn_(struct _tTkns_ *tkns, enum eTkns type, long long unsig
 		if (newPtr == NULL)
 		{
 			fprintf(stderr, "Err: Could not reallocate memory for _tTkns_.\n");
-			return 1;
+			return true;
 		}
 		tkns->tkns = newPtr;
 		tkns->cpcty <<= 1;
 	}
 	tkns->tkns[tkns->len++] = tkn;
-	return 0;
+	return false;
 }
 tScnnr tScnnr_construct(char const *fileName, FILE *filePtr)
 {
@@ -116,16 +120,16 @@ static void _tScnnr_printErr_(tScnnr const *scnnr, char const *hnt)
 	fprintf(stderr, "Err: Failed while parsing token in file '%s' on line %llu at pos %llu (started at pos %llu).\n", scnnr->fileName, scnnr->ln, scnnr->crrnt, scnnr->strt);
 	if (hnt != NULL) fprintf(stderr, "Exp: %s.\n", hnt);
 }
-static int _tScnnr_addTkn_(tScnnr *scnnr, enum eTkns type, struct _tArrBffr_ *bffr)
+static bool _tScnnr_addTkn_(tScnnr *scnnr, enum eTkns type, struct _tArrBffr_ *bffr)
 {
-	int err = _tTkns_addTkn_(&scnnr->tkns, type, scnnr->ln, scnnr->strt, bffr);
-	if (err != 0) _tScnnr_printErr_(scnnr, "Could not allocate memory for token");
+	bool err = _tTkns_addTkn_(&scnnr->tkns, type, scnnr->ln, scnnr->strt, bffr);
+	if (err != false) _tScnnr_printErr_(scnnr, "Could not allocate memory for token");
 	return err;
 }
 #define tScnnr_addTkn_s(scnnr, type, lit) \
 	{ \
-		int err = _tScnnr_addTkn_(scnnr, type, lit); \
-		if (err != 0) \
+		bool err = _tScnnr_addTkn_(scnnr, type, lit); \
+		if (err != false) \
 		{ \
 			_tScnnr_destruct_(scnnr); \
 			return err; \
@@ -188,17 +192,17 @@ inline static bool _isIdChar_(char const ch)
 {
 	return _isAlpha_(ch) || ch == '_';
 }
-static int _tScnnr_parseWord_(tScnnr *scnnr)
+static bool _tScnnr_parseWord_(tScnnr *scnnr)
 {
 	struct _tArrBffr_ bffr = _tArrBffr_construct_();
 	if (_tArrBffr_addCh_(&bffr, scnnr->ch) != 0)
 	{
-		return 1;
+		return true;
 	}
 	for (char ch = _tScnnr_ahd_(scnnr); _isIdChar_(ch) || _isB10Digit_(ch); ch = _tScnnr_ahd_(scnnr))
 	{
-		int err = _tArrBffr_addCh_(&bffr, _tScnnr_nxt_(scnnr));
-		if (err != 0)
+		bool err = _tArrBffr_addCh_(&bffr, _tScnnr_nxt_(scnnr));
+		if (err != false)
 		{
 			_tArrBffr_destruct_(&bffr);
 			return err;
@@ -227,7 +231,7 @@ static int _tScnnr_parseWord_(tScnnr *scnnr)
 		return _tScnnr_addTkn_(scnnr, tknType, &bffr);
 	}
 }
-static int _tScnnr_parseStrng_(tScnnr *scnnr)
+static bool _tScnnr_parseStrng_(tScnnr *scnnr)
 {
 	struct _tArrBffr_ bffr = _tArrBffr_construct_();
 	for (char ch = _tScnnr_ahd_(scnnr); ch != '\''; ch = _tScnnr_ahd_(scnnr))
@@ -236,7 +240,7 @@ static int _tScnnr_parseStrng_(tScnnr *scnnr)
 		{
 			_tScnnr_printErr_(scnnr, "Unterminated string");
 			_tArrBffr_destruct_(&bffr);
-			return 1;
+			return true;
 		}
 		if (ch == '\\')
 		{
@@ -262,7 +266,7 @@ static int _tScnnr_parseStrng_(tScnnr *scnnr)
 					{
 						_tScnnr_printErr_(scnnr, "Invalid escaped hex digit");
 						_tArrBffr_destruct_(&bffr);
-						return 1;
+						return true;
 					}
 					dig[idx] = chck2;
 				}
@@ -280,7 +284,7 @@ static int _tScnnr_parseStrng_(tScnnr *scnnr)
 					{
 						_tScnnr_printErr_(scnnr, "Invalid escaped octal digit");
 						_tArrBffr_destruct_(&bffr);
-						return 1;
+						return true;
 					}
 					dig[idx] = chck2;
 				}
@@ -292,14 +296,14 @@ static int _tScnnr_parseStrng_(tScnnr *scnnr)
 			{
 				_tScnnr_printErr_(scnnr, "Unknown escape character");
 				_tArrBffr_destruct_(&bffr);
-				return 1;
+				return true;
 			}
 			_tScnnr_nxt_(scnnr);
 Skp:	(void)0;
 		}
 		else ch = _tScnnr_nxt_(scnnr);
-		int err = _tArrBffr_addCh_(&bffr, ch);
-		if (err != 0)
+		bool err = _tArrBffr_addCh_(&bffr, ch);
+		if (err != false)
 		{
 			_tArrBffr_destruct_(&bffr);
 			return err;
@@ -307,14 +311,14 @@ Skp:	(void)0;
 	}
 	return _tScnnr_addTkn_(scnnr, eT_Txt, &bffr);
 }
-static int _tScnnr_parseNum_(tScnnr *scnnr)
+static bool _tScnnr_parseNum_(tScnnr *scnnr)
 {
 	//TODO(Me): Add exponents.
 	struct _tArrBffr_ bffr = _tArrBffr_construct_();
 	bool hasDot = scnnr->ch == '.';
 	enum eTkns tknType = hasDot == true ? eT_Dbl : eT_Err;
-	int err = _tArrBffr_addCh_(&bffr, scnnr->ch);
-	if (err != 0)
+	bool err = _tArrBffr_addCh_(&bffr, scnnr->ch);
+	if (err != false)
 	{
 		_tArrBffr_destruct_(&bffr);
 		return err;
@@ -325,7 +329,7 @@ static int _tScnnr_parseNum_(tScnnr *scnnr)
 		{
 			_tScnnr_printErr_(scnnr, "Multiple floating type declarations ('F') present in floating point number");
 			_tArrBffr_destruct_(&bffr);
-			return 1;
+			return true;
 		}
 		else if (ch == '.')
 		{
@@ -333,13 +337,13 @@ static int _tScnnr_parseNum_(tScnnr *scnnr)
 			{
 				_tScnnr_printErr_(scnnr, "Multiple decimal points present in floating point number");
 				_tArrBffr_destruct_(&bffr);
-				return 1;
+				return true;
 			}
 			hasDot = true;
 			tknType = eT_Dbl;
 		}
 		else if (tknType == eT_Dbl && (ch == 'F' || ch == 'f')) tknType = eT_Flt;
-		int err = _tArrBffr_addCh_(&bffr, _tScnnr_nxt_(scnnr));
+		bool err = _tArrBffr_addCh_(&bffr, _tScnnr_nxt_(scnnr));
 		if (err != 0)
 		{
 			_tArrBffr_destruct_(&bffr);
@@ -365,7 +369,7 @@ static int _tScnnr_parseNum_(tScnnr *scnnr)
 			{
 				_tScnnr_printErr_(scnnr, "Invalid digit (not of base 2) in number");
 				_tArrBffr_destruct_(&bffr);
-				return 1;
+				return true;
 			}
 		}
 		else if (tknType == eT_B8)
@@ -374,7 +378,7 @@ static int _tScnnr_parseNum_(tScnnr *scnnr)
 			{
 				_tScnnr_printErr_(scnnr, "Invalid digit (not of base 8) in number");
 				_tArrBffr_destruct_(&bffr);
-				return 1;
+				return true;
 			}
 		}
 		else if (tknType == eT_B10)
@@ -383,7 +387,7 @@ static int _tScnnr_parseNum_(tScnnr *scnnr)
 			{
 				_tScnnr_printErr_(scnnr, "Invalid digit (not of base 10) in number");
 				_tArrBffr_destruct_(&bffr);
-				return 1;
+				return true;
 			}
 		}
 		else if (tknType == eT_B16)
@@ -392,7 +396,7 @@ static int _tScnnr_parseNum_(tScnnr *scnnr)
 			{
 				_tScnnr_printErr_(scnnr, "Invalid digit (not of base 16) in number");
 				_tArrBffr_destruct_(&bffr);
-				return 1;
+				return true;
 			}
 		}
 		else if (tknType == eT_Dbl)
@@ -401,7 +405,7 @@ static int _tScnnr_parseNum_(tScnnr *scnnr)
 			{
 				_tScnnr_printErr_(scnnr, "Invalid digit (not of base 10) in floating point number");
 				_tArrBffr_destruct_(&bffr);
-				return 1;
+				return true;
 			}
 		}
 		else if (tknType == eT_Flt)
@@ -411,7 +415,7 @@ static int _tScnnr_parseNum_(tScnnr *scnnr)
 				if ((idx == bffr.len - 1) && (bffr.bffr[idx] == 'F' || bffr.bffr[idx] == 'f')) continue;
 				_tScnnr_printErr_(scnnr, "Invalid digit (not of base 10) in floating point number");
 				_tArrBffr_destruct_(&bffr);
-				return 1;
+				return true;
 			}
 		}
 	}
@@ -419,11 +423,11 @@ static int _tScnnr_parseNum_(tScnnr *scnnr)
 	{
 		_tScnnr_printErr_(scnnr, "Invalid number");
 		_tArrBffr_destruct_(&bffr);
-		return 1;
+		return true;
 	}
 	return _tScnnr_addTkn_(scnnr, tknType, &bffr);
 }
-int _tScnnr_parse_(tScnnr *scnnr)
+bool _tScnnr_parse_(tScnnr *scnnr)
 {
 	for (_tScnnr_nxt_(scnnr); scnnr->ch != EOF; _tScnnr_nxt_(scnnr))
 	{
@@ -496,7 +500,7 @@ int _tScnnr_parse_(tScnnr *scnnr)
 				if (_tScnnr_parseNum_(scnnr) != 0)
 				{
 					_tScnnr_destruct_(scnnr);
-					return 1;
+					return true;
 				}
 				continue;
 			}
@@ -507,7 +511,7 @@ int _tScnnr_parse_(tScnnr *scnnr)
 			if (_tScnnr_parseStrng_(scnnr) != 0)
 			{
 				_tScnnr_destruct_(scnnr);
-				return 1;
+				return true;
 			}
 			_tScnnr_nxt_(scnnr);
 			continue;
@@ -626,7 +630,7 @@ int _tScnnr_parse_(tScnnr *scnnr)
 				{
 					fprintf(stderr, "Err: Failed while parsing token in file '%s' on line %llu at pos %llu.\nExp: Unterminated comment.\n", scnnr->fileName, ln, crrnt);
 					_tScnnr_destruct_(scnnr);
-					return 1;
+					return true;
 				}
 				else if (scnnr->ch == '\n')
 				{
@@ -646,7 +650,7 @@ int _tScnnr_parse_(tScnnr *scnnr)
 			if (_tScnnr_parseWord_(scnnr) != 0)
 			{
 				_tScnnr_destruct_(scnnr);
-				return 1;
+				return true;
 			}
 			continue;
 		}
@@ -655,7 +659,7 @@ int _tScnnr_parse_(tScnnr *scnnr)
 			if (_tScnnr_parseNum_(scnnr) != 0)
 			{
 				_tScnnr_destruct_(scnnr);
-				return 1;
+				return true;
 			}
 			continue;
 		}
@@ -666,9 +670,9 @@ int _tScnnr_parse_(tScnnr *scnnr)
 		else
 		{
 			_tScnnr_destruct_(scnnr);
-			return 1;
+			return true;
 		}
 	}
-	return 0;
+	return false;
 }
 #undef tScnnr_addTkn_s
