@@ -14,7 +14,7 @@ Expression -> 		Additive
 Additive -> 		Multiplicative (("+" | "-") Multiplicative)*
 Multiplicative -> 	Unary (("*" | "/" | "%") Unary)*
 Unary -> 			("+" | "-" | "!" | "~")* Primary
-Primary -> 			IDENTIFER | CONSTANT
+Primary -> 			IDENTIFER | CONSTANT | "(" Expression ")"
 ```
 
 Simple return 0 program
