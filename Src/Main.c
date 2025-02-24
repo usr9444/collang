@@ -28,17 +28,16 @@ int main(int argc, char *argv[])
 		{
 			tScnnr_destruct(fileScanner);
 			tOptPrcss_destruct(optPrcss);
+			fclose(inputFile);
 			return 1;
 		}
-		for (long long unsigned idx = 0; idx < fileScanner.tkns.len; ++idx)
-		{
-			if (fileScanner.tkns.tkns[idx].bffr.cpcty == 0) fprintf(stdout, "_tTkn_(%d, %llu, %llu)\n", fileScanner.tkns.tkns[idx].type, fileScanner.tkns.tkns[idx].ln, fileScanner.tkns.tkns[idx].pos);
-			else fprintf(stdout, "_tTkn_(%d, %llu, %llu, %s)\n", fileScanner.tkns.tkns[idx].type, fileScanner.tkns.tkns[idx].ln, fileScanner.tkns.tkns[idx].pos, fileScanner.tkns.tkns[idx].bffr.bffr);
-		}
 		tAst ast = tAst_construct(fileScanner);
-		if (!tAst_parse(ast))
+		if (tAst_parse(ast))
 		{
-			printf("_tAstNd_(%u, %llu, %llu, %llu)\n", ast.rt->type, ast.rt->ln, ast.rt->pos, ast.rt->dat.cnst.dat.Llu);
+			tAst_destruct(ast);
+			tScnnr_destruct(fileScanner);
+			fclose(inputFile);
+			return 1;
 		}
 		tAst_destruct(ast);
 		tScnnr_destruct(fileScanner);

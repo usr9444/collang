@@ -68,7 +68,7 @@ enum eTkns
 	eT_True,	// True
 	eT_False,	// False
 	eT_Id,		// <?>		e.g. idntf
-	eT_Strng,	// '<?>'	e.g. 'Strng'
+	eT_Txt,		// '<?>'	e.g. 'Txt'
 	eT_B2,		// 0B0<?>	e,g, 0B001010101
 	eT_B8,		// 0O0<?>	e.g. 0O0777
 	eT_B10,		// <?>		e.g. 255

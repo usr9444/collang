@@ -4,32 +4,44 @@
 enum _eNd_
 {
 	eN_Err,
-	/*Basic*/
-	eN_Int,
+	/*Terminal*/
+	eN_Cnst,
+	eN_Multv,
+	eN_Addtv,
 };
-struct _tAstNd_
+enum _eNdType_
+{
+	eNT_Err,
+	/*Constant types*/
+	eNT_Int,
+	eNT_Flt,
+	eNT_Dbl,
+	eNT_Txt,
+	/*Additive*/
+	eNT_Mult,
+	eNT_Div,
+	eNT_Add,
+	eNT_Sub,
+};
+struct _tAstNde_
 {
 	enum _eNd_ type;
+	enum _eNdType_ info;
 	long long unsigned ln, pos;
 	union _uDat_
 	{
-		struct _tUOp_
+		struct _tUnry_
 		{
-			enum eTkns type;
-			struct _tAstNd_ *oprnd;
+			struct _tAstNde_ *lhs;
+			struct _tAstNde_ *rhs;
 		}
-		uOp;
-		struct _tConst_
+		unry;
+		union _uConst_
 		{
-			enum eTkns type;
-			struct _tDat_
-			{
-				long long unsigned Llu;
-				double Dbl;
-				char *Txt;
-				float Flt;
-			}
-			dat;
+			long long unsigned Llu;
+			double Dbl;
+			char *Txt;
+			float Flt;
 		}
 		cnst;
 	}
@@ -38,9 +50,10 @@ struct _tAstNd_
 typedef struct
 {
 	struct _tTkns_ *tkns;
-	struct _tAstNd_ *rt;
+	struct _tAstNde_ *rt;
 	long long unsigned idx;
 	struct _tTkn_ *crrnt;
+	char const *fileName;
 }
 tAst;
 tAst _tAst_construct_(tScnnr *scnnr);

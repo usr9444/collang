@@ -305,10 +305,11 @@ Skp:	(void)0;
 			return err;
 		}
 	}
-	return _tScnnr_addTkn_(scnnr, eT_Strng, &bffr);
+	return _tScnnr_addTkn_(scnnr, eT_Txt, &bffr);
 }
 static int _tScnnr_parseNum_(tScnnr *scnnr)
 {
+	//TODO(Me): Add exponents.
 	struct _tArrBffr_ bffr = _tArrBffr_construct_();
 	bool hasDot = scnnr->ch == '.';
 	enum eTkns tknType = hasDot == true ? eT_Dbl : eT_Err;
