@@ -7,14 +7,20 @@ A programming language.
 ### Grammar
 
 ```
-Program -> StatementList
-State
+Statement -> 		(Assignment | Reassignment | Expression) ";"
+Assignment -> 		IDENTIFIER ":" IDENTIFIER "=" Expression
+Reassignment -> 	IDENTIFIER ("=" | "+=" | "-=" | "*=" | "/=" | "<<=" | ">>=" | "|=" | "&=" | "~=" | "%=") Expression
+Expression -> 		Additive
+Additive -> 		Multiplicative (("+" | "-") Multiplicative)*
+Multiplicative -> 	Unary (("*" | "/" | "%") Unary)*
+Unary -> 			("+" | "-" | "!" | "~")* Primary
+Primary -> 			IDENTIFER | CONSTANT
 ```
 
 Simple return 0 program
 
 ```css
-fnc Entry(): int
+fnc Entry(): tWrd
 {
 	ret 0;
 }

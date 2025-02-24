@@ -12,8 +12,9 @@ enum _eNd_
 	eN_Rssgn,
 	eN_Expr,
 	eN_Stmnt,
-	/*Unary*/
+	/*Arithmetic*/
 	eN_Multv,
+	eN_Unry,
 	eN_Addtv,
 };
 enum _eNdInfo_
@@ -28,6 +29,10 @@ enum _eNdInfo_
 	/*Multiplicative*/
 	eNI_Mult,
 	eNI_Div,
+	eNI_Prcnt,
+	/*Unary*/
+	eNI_Bng,
+	eNI_BNot,
 	/*Additive*/
 	eNI_Add,
 	eNI_Sub,
@@ -51,12 +56,12 @@ struct _tAstNde_
 	long long unsigned ln, pos;
 	union _uDat_
 	{
-		struct _tUnry_
+		struct _tArthmtc_
 		{
 			struct _tAstNde_ *lhs;
 			struct _tAstNde_ *rhs;
 		}
-		unry;
+		arthmtc;
 		union _uConst_
 		{
 			bool Bln;
@@ -82,6 +87,7 @@ struct _tAstNde_
 		rssgn;
 		char *idntf;
 		struct _tAstNde_ *stmnt;
+		struct _tAstNde_ *unry;
 	}
 	dat;
 };

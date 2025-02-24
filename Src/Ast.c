@@ -72,25 +72,26 @@ static bool _tArrStr_srch_(struct _tArrStr_ *strs, char const *txt)
 	for (long long unsigned idx = 0LLU; idx < strs->len; ++idx) if (strcmp(strs->strs[idx], txt) == 0) return true;
 	return false;
 }
-static void _tAstNd_destruct_(struct _tAstNde_ *nde)
+static void _tAstNde_destruct_(struct _tAstNde_ *nde)
 {
 	if (nde == NULL) return;
 	else if (nde->type == eN_Cnst) nde->dat.cnst.Llu = 0LLU;
 	else if (nde->type == eN_Addtv ||
 		nde->type == eN_Multv)
 	{
-		_tAstNd_destruct_(nde->dat.unry.lhs);
-		_tAstNd_destruct_(nde->dat.unry.rhs);
+		_tAstNde_destruct_(nde->dat.arthmtc.lhs);
+		_tAstNde_destruct_(nde->dat.arthmtc.rhs);
 	}
-	else if (nde->type == eN_Expr) _tAstNd_destruct_(nde->dat.expr);
+	else if (nde->type == eN_Expr) _tAstNde_destruct_(nde->dat.expr);
 	else if (nde->type == eN_Assgn ||
 		nde->type == eN_Rssgn)
 	{
-		_tAstNd_destruct_(nde->dat.assgn.lhs);
-		_tAstNd_destruct_(nde->dat.assgn.rhs);
+		_tAstNde_destruct_(nde->dat.assgn.lhs);
+		_tAstNde_destruct_(nde->dat.assgn.rhs);
 	}
 	else if (nde->type == eN_Idntf) nde->dat.idntf = NULL;
-	else if (nde->type == eN_Stmnt) _tAstNd_destruct_(nde->dat.stmnt);
+	else if (nde->type == eN_Stmnt) _tAstNde_destruct_(nde->dat.stmnt);
+	else if (nde->type == eN_Unry) _tAstNde_destruct_(nde->dat.unry);
 	//TODO(Me): Maybe add a memset here to zero everything.
 	nde->info = eNI_Err;
 	nde->type = eN_Err;
@@ -116,12 +117,13 @@ tAst _tAst_construct_(tScnnr *scnnr)
 	_tArrStr_addStr_(&ast.knwnTypes, "tS64");
 	_tArrStr_addStr_(&ast.knwnTypes, "tF32");
 	_tArrStr_addStr_(&ast.knwnTypes, "tF64");
+	_tArrStr_addStr_(&ast.knwnTypes, "tWrd");
 	return ast;
 }
 void _tAst_destruct_(tAst *ast)
 {
 	_tArrStr_destruct_(&ast->knwnTypes);
-	_tAstNd_destruct_(ast->rt);
+	_tAstNde_destruct_(ast->rt);
 	ast->rt = NULL;
 	ast->idx = 0LLU;
 	ast->tkns = NULL;
@@ -136,7 +138,7 @@ static void _tAst_printErr_(tAst const *ast, char const *hnt, struct _tAstNde_ c
 }
 static struct _tTkn_ *_tAst_ahd_(tAst *ast, long long unsigned offst)
 {
-	if (ast->idx + offst >= ast->tkns->len)
+	if (ast->idx + offst > ast->tkns->len)
 	{
 		_tAst_printErr_(ast, "Ran out of tokens", NULL);
 		return NULL;
@@ -155,7 +157,7 @@ do \
 	if (_tAst_nxt_(ast)) \
 	{ \
 		_tAst_printErr_(ast, "Ran out of tokens", nde); \
-		_tAstNd_destruct_(nde); \
+		_tAstNde_destruct_(nde); \
 		return NULL; \
 	} \
 } \
@@ -170,7 +172,7 @@ static struct _tAstNde_ *_tAst_tIdntf_construct_(tAst *ast)
 	else
 	{
 		_tAst_printErr_(ast, "Not an identifier", nde);
-		_tAstNd_destruct_(nde);
+		_tAstNde_destruct_(nde);
 		return NULL;
 	}
 	tAst_nxt_s(ast, nde);
@@ -207,35 +209,66 @@ static struct _tAstNde_ *_tAst_uCnst_construct_(tAst *ast)
 		nde->info = eNI_Txt;
 		nde->dat.cnst.Txt = ast->crrnt->bffr.bffr;
 	}
-	else return _tAst_tIdntf_construct_(ast);
+	else
+	{
+		_tAstNde_destruct_(nde);
+		nde = _tAst_tIdntf_construct_(ast);
+		return nde;
+	}
 	tAst_nxt_s(ast, nde);
+	return nde;
+}
+static struct _tAstNde_ *_tAst_tUnry_construct_(tAst *ast)
+{
+	struct _tAstNde_ *nde = _tAstNde_construct_(ast);
+	if (nde == NULL) return NULL;
+	nde->type = eN_Unry;
+	nde->info = eNI_Err;
+	if (ast->crrnt->type == eT_Add) nde->info = eNI_Add;
+	else if (ast->crrnt->type == eT_Sub) nde->info = eNI_Sub;
+	else if (ast->crrnt->type == eT_Bng) nde->info = eNI_Bng;
+	else if (ast->crrnt->type == eT_BNot) nde->info = eNI_BNot;
+	else
+	{
+		_tAstNde_destruct_(nde);
+		nde = _tAst_uCnst_construct_(ast);
+		return nde;
+	}
+	tAst_nxt_s(ast, nde);
+	nde->dat.unry = _tAst_uCnst_construct_(ast);
+	if (nde->dat.unry == NULL)
+	{
+		_tAstNde_destruct_(nde);
+		return NULL;
+	}
 	return nde;
 }
 static struct _tAstNde_ *_tAst_tMultv_construct_(tAst *ast)
 {
-	struct _tAstNde_ *nde = _tAst_uCnst_construct_(ast);
+	struct _tAstNde_ *nde = _tAst_tUnry_construct_(ast);
 	if (nde == NULL) return NULL;
 	while (ast->crrnt->type == eT_Mult ||
 		ast->crrnt->type == eT_Div)
 	{
 		struct _tAstNde_ *tmp = _tAstNde_construct_(ast);
 		if (tmp == NULL) return NULL;
-		tmp->dat.unry.lhs = nde;
+		tmp->dat.arthmtc.lhs = nde;
 		nde = tmp;
 		nde->type = eN_Multv;
 		if (ast->crrnt->type == eT_Mult) nde->info = eNI_Mult;
 		else if (ast->crrnt->type == eT_Div) nde->info = eNI_Div;
+		else if (ast->crrnt->type == eT_Prcnt) nde->info = eNI_Prcnt;
 		else
 		{
 			_tAst_printErr_(ast, "Invalid token", nde);
-			_tAstNd_destruct_(nde);
+			_tAstNde_destruct_(nde);
 			return NULL;
 		}
 		tAst_nxt_s(ast, nde);
-		nde->dat.unry.rhs = _tAst_uCnst_construct_(ast);
-		if (nde->dat.unry.rhs == NULL)
+		nde->dat.arthmtc.rhs = _tAst_tUnry_construct_(ast);
+		if (nde->dat.arthmtc.rhs == NULL)
 		{
-			_tAstNd_destruct_(nde);
+			_tAstNde_destruct_(nde);
 			return NULL;
 		}
 	}
@@ -250,7 +283,7 @@ static struct _tAstNde_ *_tAst_tAddtv_construct_(tAst *ast)
 	{
 		struct _tAstNde_ *tmp = _tAstNde_construct_(ast);
 		if (tmp == NULL) return NULL;
-		tmp->dat.unry.lhs = nde;
+		tmp->dat.arthmtc.lhs = nde;
 		nde = tmp;
 		nde->type = eN_Addtv;
 		if (ast->crrnt->type == eT_Add) nde->info = eNI_Add;
@@ -258,14 +291,14 @@ static struct _tAstNde_ *_tAst_tAddtv_construct_(tAst *ast)
 		else
 		{
 			_tAst_printErr_(ast, "Invalid token", nde);
-			_tAstNd_destruct_(nde);
+			_tAstNde_destruct_(nde);
 			return NULL;
 		}
 		tAst_nxt_s(ast, nde);
-		nde->dat.unry.rhs = _tAst_tMultv_construct_(ast);
-		if (nde->dat.unry.rhs == NULL)
+		nde->dat.arthmtc.rhs = _tAst_tMultv_construct_(ast);
+		if (nde->dat.arthmtc.rhs == NULL)
 		{
-			_tAstNd_destruct_(nde);
+			_tAstNde_destruct_(nde);
 			return NULL;
 		}
 	}
@@ -278,6 +311,11 @@ static struct _tAstNde_ *_tAst_tExpr_construct_(tAst *ast)
 	nde->type = eN_Expr;
 	nde->info = eNI_Err;
 	nde->dat.expr = _tAst_tAddtv_construct_(ast);
+	if (nde->dat.expr == NULL)
+	{
+		_tAstNde_destruct_(nde);
+		return NULL;
+	}
 	return nde;
 }
 static struct _tAstNde_ *_tAst_tAssgn_construct_(tAst *ast)
@@ -289,13 +327,13 @@ static struct _tAstNde_ *_tAst_tAssgn_construct_(tAst *ast)
 	nde->dat.assgn.lhs = _tAst_tIdntf_construct_(ast);
 	if (nde->dat.assgn.lhs == NULL)
 	{
-		_tAstNd_destruct_(nde);
+		_tAstNde_destruct_(nde);
 		return NULL;
 	}
 	if (ast->crrnt->type != eT_Cln)
 	{
 		_tAst_printErr_(ast, "Expected ':'", nde);
-		_tAstNd_destruct_(nde);
+		_tAstNde_destruct_(nde);
 		return NULL;
 	}
 	tAst_nxt_s(ast, nde);
@@ -304,13 +342,13 @@ static struct _tAstNde_ *_tAst_tAssgn_construct_(tAst *ast)
 	else
 	{
 		_tAst_printErr_(ast, "Expected identifier to denote variable type", nde);
-		_tAstNd_destruct_(nde);
+		_tAstNde_destruct_(nde);
 		return NULL;
 	}
 	if (_tArrStr_srch_(&ast->knwnTypes, ast->crrnt->bffr.bffr) == false)
 	{
 		_tAst_printErr_(ast, "Identifier is not a valid type", nde);
-		_tAstNd_destruct_(nde);
+		_tAstNde_destruct_(nde);
 		return NULL;
 	}
 	tAst_nxt_s(ast, nde);
@@ -318,14 +356,14 @@ static struct _tAstNde_ *_tAst_tAssgn_construct_(tAst *ast)
 	else
 	{
 		_tAst_printErr_(ast, "Unexpected token", nde);
-		_tAstNd_destruct_(nde);
+		_tAstNde_destruct_(nde);
 		return NULL;
 	}
 	tAst_nxt_s(ast, nde);
 	nde->dat.assgn.rhs = _tAst_tExpr_construct_(ast);
 	if (nde->dat.assgn.rhs == NULL)
 	{
-		_tAstNd_destruct_(nde);
+		_tAstNde_destruct_(nde);
 		return NULL;
 	};
 	return nde;
@@ -339,7 +377,7 @@ static struct _tAstNde_ *_tAst_tRssgn_construct_(tAst *ast)
 	nde->dat.assgn.lhs = _tAst_tIdntf_construct_(ast);
 	if (nde->dat.assgn.lhs == NULL)
 	{
-		_tAstNd_destruct_(nde);
+		_tAstNde_destruct_(nde);
 		return NULL;
 	}
 	if (ast->crrnt->type == eT_Eq) nde->info = eNI_Eq;
@@ -356,14 +394,14 @@ static struct _tAstNde_ *_tAst_tRssgn_construct_(tAst *ast)
 	else
 	{
 		_tAst_printErr_(ast, "Unexpected token", nde);
-		_tAstNd_destruct_(nde);
+		_tAstNde_destruct_(nde);
 		return NULL;
 	}
 	tAst_nxt_s(ast, nde);
 	nde->dat.assgn.rhs = _tAst_tExpr_construct_(ast);
 	if (nde->dat.assgn.rhs == NULL)
 	{
-		_tAstNd_destruct_(nde);
+		_tAstNde_destruct_(nde);
 		return NULL;
 	};
 	return nde;
@@ -377,7 +415,7 @@ static struct _tAstNde_ *_tAst_tStmnt_construct_(tAst *ast)
 	struct _tTkn_ *ahd = _tAst_ahd_(ast, 0);
 	if (ahd == NULL)
 	{
-		_tAstNd_destruct_(nde);
+		_tAstNde_destruct_(nde);
 		return NULL;
 	}
 	else if (ahd->type == eT_Cln)
@@ -385,7 +423,7 @@ static struct _tAstNde_ *_tAst_tStmnt_construct_(tAst *ast)
 		nde->dat.stmnt = _tAst_tAssgn_construct_(ast);
 		if (nde->dat.stmnt == NULL)
 		{
-			_tAstNd_destruct_(nde);
+			_tAstNde_destruct_(nde);
 			return NULL;
 		}
 	}
@@ -404,7 +442,7 @@ static struct _tAstNde_ *_tAst_tStmnt_construct_(tAst *ast)
 		nde->dat.stmnt = _tAst_tRssgn_construct_(ast);
 		if (nde->dat.stmnt == NULL)
 		{
-			_tAstNd_destruct_(nde);
+			_tAstNde_destruct_(nde);
 			return NULL;
 		}
 	}
@@ -413,14 +451,14 @@ static struct _tAstNde_ *_tAst_tStmnt_construct_(tAst *ast)
 		nde->dat.stmnt = _tAst_tExpr_construct_(ast);
 		if (nde->dat.stmnt == NULL)
 		{
-			_tAstNd_destruct_(nde);
+			_tAstNde_destruct_(nde);
 			return NULL;
 		}
 	}
 	if (ast->crrnt->type != eT_Smicln)
 	{
 		_tAst_printErr_(ast, "Expected ';'", NULL);
-		_tAstNd_destruct_(nde);
+		_tAstNde_destruct_(nde);
 		return NULL;
 	}
 	tAst_nxt_s(ast, nde);
@@ -466,11 +504,35 @@ void _tAst_print_(struct _tAstNde_ *nde, long long unsigned indnt)
 		case eNI_Div:
 			printf("/\n");
 			break;
+		case eNI_Prcnt:
+			printf("%%\n");
+			break;
 		default:
 			printf("Unknown eN_Multv (%d)\n", nde->info);
 		}
-		_tAst_print_(nde->dat.unry.lhs, indnt + 1LLU);
-		_tAst_print_(nde->dat.unry.rhs, indnt + 1LLU);
+		_tAst_print_(nde->dat.arthmtc.lhs, indnt + 1LLU);
+		_tAst_print_(nde->dat.arthmtc.rhs, indnt + 1LLU);
+		break;
+	case eN_Unry:
+		printf("eN_Unry: ");
+		switch (nde->info)
+		{
+		case eNI_Add:
+			printf("+\n");
+			break;
+		case eNI_Sub:
+			printf("-\n");
+			break;
+		case eNI_Bng:
+			printf("!\n");
+			break;
+		case eNI_BNot:
+			printf("~\n");
+			break;
+		default:
+			printf("Unknown eN_Unry (%d)\n", nde->info);
+		}
+		_tAst_print_(nde->dat.unry, indnt + 1LLU);
 		break;
 	case eN_Addtv:
 		printf("eN_Addtv: ");
@@ -485,8 +547,8 @@ void _tAst_print_(struct _tAstNde_ *nde, long long unsigned indnt)
 		default:
 			printf("Unknown eN_Addtv (%d)\n", nde->info);
 		}
-		_tAst_print_(nde->dat.unry.lhs, indnt + 1LLU);
-		_tAst_print_(nde->dat.unry.rhs, indnt + 1LLU);
+		_tAst_print_(nde->dat.arthmtc.lhs, indnt + 1LLU);
+		_tAst_print_(nde->dat.arthmtc.rhs, indnt + 1LLU);
 		break;
 	case eN_Expr:
 		printf("eN_Expr:\n");

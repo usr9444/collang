@@ -5,7 +5,6 @@
 int main(int argc, char *argv[])
 {
 	tOptPrcss optPrcss = tOptPrcss_construct("collang", "<Compiler options> [Input files]");
-	//tOptPrcss_addOpt(optPrcss, "Arch", "Specifies the target architecture (x86, ARM, x86_64, ARM64)", false, 1, tOT_T, "--arch");
 	tOptPrcss_addOpt(optPrcss, "Output", "Specifies the target output file name", false, 1, tOT_T, "--output", "-o");
 	tOptPrcss_process_s(optPrcss, argc, argv);
 	if (optPrcss.argc == 0LLU)
