@@ -3,6 +3,7 @@
 #include <string.h>
 #include "Scanning.h"
 #include "Ast.h"
+static struct _tAstNde_ *_tAst_Prmry_construct_(tAst *ast);
 static struct _tAstNde_ *_tAstNde_construct_(tAst *ast)
 {
 	struct _tAstNde_ *nde = calloc(1, sizeof(struct _tAstNde_));
@@ -92,7 +93,6 @@ static void _tAstNde_destruct_(struct _tAstNde_ *nde)
 	else if (nde->type == eN_Idntf) nde->dat.idntf = NULL;
 	else if (nde->type == eN_Stmnt) _tAstNde_destruct_(nde->dat.stmnt);
 	else if (nde->type == eN_Unry) _tAstNde_destruct_(nde->dat.unry);
-	//TODO(Me): Maybe add a memset here to zero everything.
 	nde->info = eNI_Err;
 	nde->type = eN_Err;
 	nde->pos = 0LLU;
@@ -211,9 +211,9 @@ static struct _tAstNde_ *_tAst_uCnst_construct_(tAst *ast)
 	}
 	else
 	{
+		_tAst_printErr_(ast, "Invalid token 1", nde);
 		_tAstNde_destruct_(nde);
-		nde = _tAst_tIdntf_construct_(ast);
-		return nde;
+		return NULL;
 	}
 	tAst_nxt_s(ast, nde);
 	return nde;
@@ -231,11 +231,11 @@ static struct _tAstNde_ *_tAst_tUnry_construct_(tAst *ast)
 	else
 	{
 		_tAstNde_destruct_(nde);
-		nde = _tAst_uCnst_construct_(ast);
+		nde = _tAst_Prmry_construct_(ast);
 		return nde;
 	}
 	tAst_nxt_s(ast, nde);
-	nde->dat.unry = _tAst_uCnst_construct_(ast);
+	nde->dat.unry = _tAst_Prmry_construct_(ast);
 	if (nde->dat.unry == NULL)
 	{
 		_tAstNde_destruct_(nde);
@@ -317,6 +317,24 @@ static struct _tAstNde_ *_tAst_tExpr_construct_(tAst *ast)
 		return NULL;
 	}
 	return nde;
+}
+static struct _tAstNde_ *_tAst_Prmry_construct_(tAst *ast)
+{
+	if (ast->crrnt->type == eT_Id) return _tAst_tIdntf_construct_(ast);
+	else if (ast->crrnt->type == eT_LPrnth)
+	{
+		tAst_nxt_s(ast, NULL);
+		struct _tAstNde_ *nde = _tAst_tExpr_construct_(ast);
+		if (ast->crrnt->type != eT_RPrnth)
+		{
+			_tAst_printErr_(ast, "Missing right parenthesis", nde);
+			_tAstNde_destruct_(nde);
+			return NULL;
+		}
+		tAst_nxt_s(ast, NULL);
+		return nde;
+	}
+	else return _tAst_uCnst_construct_(ast);
 }
 static struct _tAstNde_ *_tAst_tAssgn_construct_(tAst *ast)
 {
@@ -467,7 +485,7 @@ static struct _tAstNde_ *_tAst_tStmnt_construct_(tAst *ast)
 void _tAst_print_(struct _tAstNde_ *nde, long long unsigned indnt)
 {
 	if (nde == NULL) return;
-	for (long long unsigned idx = 0; idx < indnt; idx++) printf(" ");
+	for (long long unsigned idx = 0; idx < indnt; idx++) printf("\t");
 	switch (nde->type)
 	{
 	case eN_Cnst:

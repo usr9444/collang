@@ -313,7 +313,7 @@ Skp:	(void)0;
 }
 static bool _tScnnr_parseNum_(tScnnr *scnnr)
 {
-	//TODO(Me): Add exponents.
+	//TODO(Me): Add exponents to base 10 integers and floats (maybe?).
 	struct _tArrBffr_ bffr = _tArrBffr_construct_();
 	bool hasDot = scnnr->ch == '.';
 	enum eTkns tknType = hasDot == true ? eT_Dbl : eT_Err;
