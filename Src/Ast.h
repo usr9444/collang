@@ -18,6 +18,7 @@ enum _eNd_
 	eN_Rltnl,
 	eN_Lgcl,
 	/*Expression*/
+	eN_Trn,
 	eN_Assgn,
 	eN_Rssgn,
 	eN_Expr,
@@ -126,6 +127,13 @@ struct _tAstNde_
 			struct _tAstNde_ *rhs;
 		}
 		lgcl;
+		struct _tTrn_
+		{
+			struct _tAstNde_ *cnd;
+			struct _tAstNde_ *tru;
+			struct _tAstNde_ *fls;
+		}
+		trn;
 	}
 	dat;
 };

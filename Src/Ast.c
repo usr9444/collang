@@ -3,6 +3,7 @@
 #include <string.h>
 #include "Scanning.h"
 #include "Ast.h"
+static struct _tAstNde_ *_tAst_tExpr_construct_(tAst *ast);
 static struct _tAstNde_ *_tAst_Prmry_construct_(tAst *ast);
 static struct _tAstNde_ *_tAstNde_construct_(tAst *ast)
 {
@@ -111,6 +112,12 @@ static void _tAstNde_destruct_(struct _tAstNde_ *nde)
 		_tAstNde_destruct_(nde->dat.btws.lhs);
 		_tAstNde_destruct_(nde->dat.btws.rhs);
 	}
+	else if (nde->type == eN_Trn)
+	{
+		_tAstNde_destruct_(nde->dat.trn.cnd);
+		_tAstNde_destruct_(nde->dat.trn.tru);
+		_tAstNde_destruct_(nde->dat.trn.fls);
+	}
 	nde->info = eNI_Err;
 	nde->type = eN_Err;
 	nde->pos = 0LLU;
@@ -209,7 +216,7 @@ static struct _tAstNde_ *_tAst_uCnst_construct_(tAst *ast)
 	else if (ast->crrnt->type == eT_True ||
 		ast->crrnt->type == eT_False)
 	{
-		nde->dat.cnst.Bln = ast->crrnt->type == eT_True;
+		nde->dat.cnst.Bln = (ast->crrnt->type == eT_True);
 		nde->info = eNI_Bln;
 	}
 	else if (ast->crrnt->type == eT_Flt)
@@ -229,7 +236,6 @@ static struct _tAstNde_ *_tAst_uCnst_construct_(tAst *ast)
 	}
 	else
 	{
-		_tAst_printErr_(ast, "Invalid token 1", nde);
 		_tAstNde_destruct_(nde);
 		return NULL;
 	}
@@ -502,13 +508,56 @@ static struct _tAstNde_ *_tAst_tLgcl_construct_(tAst *ast)
 	}
 	return nde;
 }
+static struct _tAstNde_ *_tAst_tTrn_construct_(tAst *ast)
+{
+	struct _tAstNde_ *nde = _tAstNde_construct_(ast);
+	if (nde == NULL) return NULL;
+	nde->type = eN_Trn;
+	nde->info = eNI_Err;
+	nde->dat.trn.cnd = _tAst_tLgcl_construct_(ast);
+	if (nde->dat.trn.cnd == NULL)
+	{
+		_tAstNde_destruct_(nde);
+		return NULL;
+	}
+	if (ast->crrnt->type != eT_Qstn)
+	{
+		struct _tAstNde_ *tmp = nde->dat.trn.cnd;
+		nde->dat.trn.cnd = NULL;
+		_tAstNde_destruct_(nde);
+		return tmp;
+	}
+	tAst_nxt_s(ast, nde);
+	nde->dat.trn.tru = _tAst_tExpr_construct_(ast);
+	if (nde->dat.trn.tru == NULL)
+	{
+		_tAst_printErr_(ast, "Expected expression for when condition is True in ternary operator", nde->dat.trn.tru);
+		_tAstNde_destruct_(nde);
+		return NULL;
+	}
+	if (ast->crrnt->type != eT_Cmma)
+	{
+		_tAst_printErr_(ast, "Expected ',' for ternary operator", nde->dat.trn.fls);
+		_tAstNde_destruct_(nde);
+		return NULL;
+	}
+	tAst_nxt_s(ast, nde);
+	nde->dat.trn.fls = _tAst_tExpr_construct_(ast);
+	if (nde->dat.trn.fls == NULL)
+	{
+		_tAst_printErr_(ast, "Expected expression for when condition is False in ternary operator", nde->dat.trn.fls);
+		_tAstNde_destruct_(nde);
+		return NULL;
+	}
+	return nde;
+}
 static struct _tAstNde_ *_tAst_tExpr_construct_(tAst *ast)
 {
 	struct _tAstNde_ *nde = _tAstNde_construct_(ast);
 	if (nde == NULL) return NULL;
 	nde->type = eN_Expr;
 	nde->info = eNI_Err;
-	nde->dat.expr = _tAst_tLgcl_construct_(ast);
+	nde->dat.expr = _tAst_tTrn_construct_(ast);
 	if (nde->dat.expr == NULL)
 	{
 		_tAstNde_destruct_(nde);
@@ -842,6 +891,18 @@ void _tAst_print_(struct _tAstNde_ *nde, long long unsigned indnt)
 		}
 		_tAst_print_(nde->dat.btws.lhs, indnt + 1LLU);
 		_tAst_print_(nde->dat.btws.rhs, indnt + 1LLU);
+		break;
+	case eN_Trn:
+		printf("eN_Trn:(\n");
+		_tAst_print_(nde->dat.trn.cnd, indnt + 1LLU);
+		for (long long unsigned idx = 0; idx < indnt; idx++) printf("\t");
+		printf("?\n");
+		_tAst_print_(nde->dat.trn.tru, indnt + 1LLU);
+		for (long long unsigned idx = 0; idx < indnt; idx++) printf("\t");
+		printf(",\n");
+		_tAst_print_(nde->dat.trn.fls, indnt + 1LLU);
+		for (long long unsigned idx = 0; idx < indnt; idx++) printf("\t");
+		printf(")\n");
 		break;
 	case eN_Expr:
 		printf("eN_Expr:(\n");
