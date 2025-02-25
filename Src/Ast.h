@@ -7,15 +7,19 @@ enum _eNd_
 	/*Terminal*/
 	eN_Cnst,
 	eN_Idntf,
+	/*Arithmetic*/
+	eN_Unry,
+	eN_Multv,
+	eN_Addtv,
+	eN_BShft,
+	eN_BAnd,
+	eN_BXor,
+	eN_BOr,
 	/*Expression*/
 	eN_Assgn,
 	eN_Rssgn,
 	eN_Expr,
 	eN_Stmnt,
-	/*Arithmetic*/
-	eN_Multv,
-	eN_Unry,
-	eN_Addtv,
 };
 enum _eNdInfo_
 {
@@ -26,16 +30,19 @@ enum _eNdInfo_
 	eNI_Flt,
 	eNI_Dbl,
 	eNI_Txt,
+	/*Unary*/
+	eNI_Bng,
+	eNI_BNot,
 	/*Multiplicative*/
 	eNI_Mult,
 	eNI_Div,
 	eNI_Prcnt,
-	/*Unary*/
-	eNI_Bng,
-	eNI_BNot,
 	/*Additive*/
 	eNI_Add,
 	eNI_Sub,
+	/*Bitwise*/
+	eNI_LShft,
+	eNI_RShft,
 	/*Assignments*/
 	eNI_Eq,
 	eNI_AddEq,
@@ -48,6 +55,7 @@ enum _eNdInfo_
 	eNI_BAndEq,
 	eNI_BNotEq,
 	eNI_PrcntEq,
+	eNI_BXorEq,
 };
 struct _tAstNde_
 {
@@ -88,6 +96,12 @@ struct _tAstNde_
 		char *idntf;
 		struct _tAstNde_ *stmnt;
 		struct _tAstNde_ *unry;
+		struct _tBtws_
+		{
+			struct _tAstNde_ *lhs;
+			struct _tAstNde_ *rhs;
+		}
+		btws;
 	}
 	dat;
 };

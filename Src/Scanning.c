@@ -427,6 +427,14 @@ static bool _tScnnr_parseNum_(tScnnr *scnnr)
 	}
 	return _tScnnr_addTkn_(scnnr, tknType, &bffr);
 }
+void _tTkns_print_(struct _tTkns_ *tkns)
+{
+	for (long long unsigned idx = 0; idx < tkns->len; ++idx)
+	{
+		if (tkns->tkns[idx].bffr.cpcty == 0) fprintf(stdout, "_tTkn_(%d, %llu, %llu)\n", tkns->tkns[idx].type, tkns->tkns[idx].ln, tkns->tkns[idx].pos);
+		else fprintf(stdout, "_tTkn_(%d, %llu, %llu, %s)\n", tkns->tkns[idx].type, tkns->tkns[idx].ln, tkns->tkns[idx].pos, tkns->tkns[idx].bffr.bffr);
+	}
+}
 bool _tScnnr_parse_(tScnnr *scnnr)
 {
 	for (_tScnnr_nxt_(scnnr); scnnr->ch != EOF; _tScnnr_nxt_(scnnr))
@@ -545,6 +553,12 @@ bool _tScnnr_parse_(tScnnr *scnnr)
 			else if (ahd == '|')
 			{
 				tknType = eT_MultBOr;
+				char ahd2 = _tScnnr_ahd2_(scnnr);
+				if (ahd2 == '=')
+				{
+					tknType = eT_MultBOrEq;
+					_tScnnr_nxt_(scnnr);
+				}
 				_tScnnr_nxt_(scnnr);
 			}
 			else tknType = eT_Mult;
@@ -673,6 +687,7 @@ bool _tScnnr_parse_(tScnnr *scnnr)
 			return true;
 		}
 	}
+	_tTkns_print_(&scnnr->tkns);
 	return false;
 }
 #undef tScnnr_addTkn_s

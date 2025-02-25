@@ -5,52 +5,53 @@ enum eTkns
 {
 	eT_Err,
 	/*Brackets*/
-	eT_LPrnth,	// (
-	eT_RPrnth,	// )
-	eT_LCrly,	// {
-	eT_RCrly,	// }
-	eT_LSqr,	// [
-	eT_RSqr,	// ]
-	eT_Lss,		// <
-	eT_Grt,		// >
-	eT_Cmma,	// ,
-	eT_Dot,		// .
+	eT_LPrnth,		// (
+	eT_RPrnth,		// )
+	eT_LCrly,		// {
+	eT_RCrly,		// }
+	eT_LSqr,		// [
+	eT_RSqr,		// ]
+	eT_Lss,			// <
+	eT_Grt,			// >
+	eT_Cmma,		// ,
+	eT_Dot,			// .
 	/*Equations*/
-	eT_Add,		// +
-	eT_AddEq,	// +=
-	eT_Sub,		// -
-	eT_SubEq,	// -=
-	eT_Mult,	// *
-	eT_MultEq,	// *=
-	eT_MultBOr,	// *|
-	eT_Div,		// /
-	eT_DivEq,	// /=
-	eT_Smicln,	// ;
-	eT_Cln,		// :
-	eT_Bng,		// !
-	eT_BngEq,	// !=
-	eT_Eq,		// =
-	eT_EqEq,	// ==
-	eT_LssEq,	// <=
-	eT_LssLss,	// <<
-	eT_LssLssEq,// <<=
-	eT_GrtEq,	// >=
-	eT_GrtGrt,	// >>
-	eT_GrtGrtEq,// >>=
-	eT_BOr,		// |
-	eT_BOrEq,	// |=
-	eT_BAnd,	// &
-	eT_BAndEq,	// &=
-	eT_BNot,	// ~
-	eT_BNotEq,	// ~=
-	eT_Prcnt,	// %
-	eT_PrcntEq,	// %=
-	eT_Qstn,	// ?
-	eT_Crt,		// ^
-	eT_At,		// @
-	eT_She,		// #
-	eT_Dlr,		// $
-	eT_BSlsh,	// (Backslash)
+	eT_Add,			// +
+	eT_AddEq,		// +=
+	eT_Sub,			// -
+	eT_SubEq,		// -=
+	eT_Mult,		// *
+	eT_MultEq,		// *=
+	eT_MultBOr,		// *|
+	eT_MultBOrEq,	// *|=
+	eT_Div,			// /
+	eT_DivEq,		// /=
+	eT_Smicln,		// ;
+	eT_Cln,			// :
+	eT_Bng,			// !
+	eT_BngEq,		// !=
+	eT_Eq,			// =
+	eT_EqEq,		// ==
+	eT_LssEq,		// <=
+	eT_LssLss,		// <<
+	eT_LssLssEq,	// <<=
+	eT_GrtEq,		// >=
+	eT_GrtGrt,		// >>
+	eT_GrtGrtEq,	// >>=
+	eT_BOr,			// |
+	eT_BOrEq,		// |=
+	eT_BAnd,		// &
+	eT_BAndEq,		// &=
+	eT_BNot,		// ~
+	eT_BNotEq,		// ~=
+	eT_Prcnt,		// %
+	eT_PrcntEq,		// %=
+	eT_Qstn,		// ?
+	eT_Crt,			// ^
+	eT_At,			// @
+	eT_She,			// #
+	eT_Dlr,			// $
+	eT_BSlsh,		// (Backslash)
 	/*Flow control*/
 	eT_And,		// and
 	eT_Or,		// or
