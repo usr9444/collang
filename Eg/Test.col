@@ -1,2 +1,4 @@
-stmnt1;
-stmnt2;
+idx : tU64 = 0;
+while idx < 10 {
+	idx += 1;
+}

@@ -8,11 +8,12 @@ A programming language.
 
 ```
 StatementList->		Statement*
+Conditional->		("if" | "while") Logical (Block | Statement)
 Block->				"{" StatementList "}"
 Statement-> 		(Assignment | Reassignment | Expression) ";"
+Expression-> 		TernaryConditional
 Assignment-> 		IDENTIFIER ":" IDENTIFIER "=" Expression
 Reassignment-> 		IDENTIFIER ("=" | "+=" | "-=" | "*=" | "/=" | "<<=" | ">>=" | "|=" | "&=" | "~=" | "%=") Expression
-Expression-> 		TernaryConditional
 TernaryCondition->	Logical "?" Expression "," Expression
 Logical->			Relational (("and" | "or") Relational)*
 Relational->		BitwiseOr (("<" | ">" | "<=" | ">=" | "==" | "!=") BitwiseOr)*

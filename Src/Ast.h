@@ -29,7 +29,9 @@ enum _eNd_
 	eN_Expr,
 	eN_Stmnt,
 	eN_StmntLst,
+	/*Flow control*/
 	eN_Blck,
+	eN_Cndtl,
 };
 enum _eNdInfo_
 {
@@ -76,6 +78,9 @@ enum _eNdInfo_
 	eNI_BNotEq,
 	eNI_PrcntEq,
 	eNI_BXorEq,
+	/*Flow control*/
+	eNI_If,
+	eNI_While,
 };
 struct _tAstNde_
 {
@@ -152,6 +157,12 @@ struct _tAstNde_
 			struct _tAstNde_ *stmnts;
 		}
 		blck;
+		struct _tCndtnl_
+		{
+			struct _tAstNde_ *cnd;
+			struct _tAstNde_ *stmntOrBlck;
+		}
+		cndtnl;
 	}
 	dat;
 };

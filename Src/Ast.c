@@ -5,6 +5,8 @@
 #include "Ast.h"
 static struct _tAstNde_ *_tAst_tExpr_construct_(tAst *ast);
 static struct _tAstNde_ *_tAst_Prmry_construct_(tAst *ast);
+static struct _tAstNde_ *_tAst_tBlck_construct_(tAst *ast);
+static struct _tAstNde_ *_tAst_tStmnt_construct_(tAst *ast);
 void _tAst_print_(struct _tAstNde_ *nde, long long unsigned indnt)
 {
 	if (nde == NULL) return;
@@ -240,16 +242,39 @@ void _tAst_print_(struct _tAstNde_ *nde, long long unsigned indnt)
 		printf("eN_Idntf: %s\n", nde->dat.idntf);
 		break;
 	case eN_Stmnt:
-		printf("eN_Stmnt:\n");
+		printf("eN_Stmnt:(\n");
 		_tAst_print_(nde->dat.stmnt, indnt + 1LLU);
 		for (long long unsigned idx = 0; idx < indnt; idx++) printf("\t");
 		printf(");\n");
 		break;
 	case eN_StmntLst:
-		printf("eN_StmntLst:(\n");
+		printf("eN_StmntLst:[\n");
 		for (long long unsigned idx = 0LLU; idx < nde->dat.stmntLst.lng; ++idx) _tAst_print_(nde->dat.stmntLst.stmnts[idx], indnt + 1LLU);
 		for (long long unsigned idx = 0; idx < indnt; idx++) printf("\t");
-		printf(")\n");
+		printf("]\n");
+		break;
+	case eN_Cndtl:
+		printf("eN_Cndtl: ");
+		switch (nde->info)
+		{
+		case eNI_If:
+			printf("if\n");
+			break;
+		case eNI_While:
+			printf("while\n");
+			break;
+		default:
+			printf("Unknown eN_Cndtl (%d)\n", nde->info);
+			break;
+		}
+		_tAst_print_(nde->dat.cndtnl.cnd, indnt + 1LLU);
+		_tAst_print_(nde->dat.cndtnl.stmntOrBlck, indnt + 1LLU);
+		break;
+	case eN_Blck:
+		printf("eN_Blck:{\n");
+		_tAst_print_(nde->dat.blck.stmnts, indnt + 1LLU);
+		for (long long unsigned idx = 0; idx < indnt; idx++) printf("\t");
+		printf("}\n");
 		break;
 	case eN_Err:
 		fprintf(stderr, "Err: Unknown Ast node.\n");
@@ -374,6 +399,11 @@ static void _tAstNde_destruct_(struct _tAstNde_ *nde)
 	}
 	else if (nde->type == eN_StmntLst) for (long long unsigned idx = 0LLU; idx < nde->dat.stmntLst.lng; ++idx) _tAstNde_destruct_(nde->dat.stmntLst.stmnts[idx]);
 	else if (nde->type == eN_Blck) _tAstNde_destruct_(nde->dat.blck.stmnts);
+	else if (nde->type == eN_Cndtl)
+	{
+		_tAstNde_destruct_(nde->dat.cndtnl.cnd);
+		_tAstNde_destruct_(nde->dat.cndtnl.stmntOrBlck);
+	}
 	nde->info = eNI_Err;
 	nde->type = eN_Err;
 	nde->pos = 0LLU;
@@ -412,18 +442,14 @@ void _tAst_destruct_(tAst *ast)
 }
 static void _tAst_printErr_(tAst const *ast, char const *hnt, struct _tAstNde_ const *nde)
 {
-	fprintf(stderr, "Err: Failed whilst building Ast in file '%s' on line %llu at pos %llu.\nTkn: Enumerated as token type '%d'", ast->fileName, ast->crrnt->ln ? ast->crrnt->ln : 1, ast->crrnt->pos ? ast->crrnt->pos : 1, ast->crrnt->type);
+	fprintf(stderr, "Err: Failed whilst building Ast in file '%s' on line %llu at pos %llu.\nTkn: Enumerated as token type '%d'", ast->fileName, ast->tkns->tkns[ast->idx % ast->tkns->lng].ln, ast->tkns->tkns[ast->idx % ast->tkns->lng].pos, ast->tkns->tkns[ast->idx % ast->tkns->lng].type);
 	if (nde == NULL) fprintf(stderr, ".\n");
 	else fprintf(stderr, " and enumerated as Ast node type '%d', '%d'.\n", nde->type, nde->info);
 	if (hnt != NULL) fprintf(stderr, "Exp: %s.\n", hnt);
 }
 static struct _tTkn_ *_tAst_ahd_(tAst *ast, long long unsigned offst)
 {
-	if (ast->idx + offst > ast->tkns->lng)
-	{
-		_tAst_printErr_(ast, "Ran out of tokens", NULL);
-		return NULL;
-	}
+	if (ast->idx + offst > ast->tkns->lng) return NULL;
 	return &ast->tkns->tkns[ast->idx + offst];
 }
 static bool _tAst_nxt_(tAst *ast)
@@ -928,63 +954,112 @@ static struct _tAstNde_ *_tAst_tRssgn_construct_(tAst *ast)
 	};
 	return nde;
 }
+static struct _tAstNde_ *_tAst_tCndtl_construct_(tAst *ast)
+{
+	struct _tAstNde_ *nde = _tAstNde_construct_(ast);
+	if (nde == NULL) return NULL;
+	nde->type = eN_Cndtl;
+	if (ast->crrnt->type == eT_If) nde->info = eNI_If;
+	else if (ast->crrnt->type == eT_While) nde->info = eNI_While;
+	else
+	{
+		_tAst_printErr_(ast, "Unknown conditional", nde);
+		_tAstNde_destruct_(nde);
+		return NULL;
+	}
+	tAst_nxt_s(ast, nde);
+	nde->dat.cndtnl.cnd = _tAst_tLgcl_construct_(ast);
+	if (nde->dat.cndtnl.cnd == NULL)
+	{
+		_tAst_printErr_(ast, "Unknown condition", nde);
+		_tAstNde_destruct_(nde);
+		return NULL;
+	}
+	if (ast->crrnt->type == eT_LCrly) nde->dat.cndtnl.stmntOrBlck = _tAst_tBlck_construct_(ast);
+	else nde->dat.cndtnl.stmntOrBlck = _tAst_tStmnt_construct_(ast);
+	if (nde->dat.cndtnl.stmntOrBlck == NULL)
+	{
+		_tAstNde_destruct_(nde);
+		return NULL;
+	}
+	return nde;
+}
 static struct _tAstNde_ *_tAst_tStmnt_construct_(tAst *ast)
 {
 	struct _tAstNde_ *nde = _tAstNde_construct_(ast);
 	if (nde == NULL) return NULL;
 	nde->type = eN_Stmnt;
 	nde->info = eNI_Err;
-	struct _tTkn_ *ahd = _tAst_ahd_(ast, 0);
-	if (ahd == NULL)
+	if (ast->crrnt->type == eT_If || ast->crrnt->type == eT_While)
 	{
+		nde->dat.stmnt = _tAst_tCndtl_construct_(ast);
+		if (nde->dat.stmnt == NULL)
+		{
+			_tAstNde_destruct_(nde);
+			return NULL;
+		}
+	}
+	else if (ast->crrnt->type == eT_Smicln)
+	{
+		_tAst_nxt_(ast);
 		_tAstNde_destruct_(nde);
-		return NULL;
-	}
-	else if (ahd->type == eT_Cln)
-	{
-		nde->dat.stmnt = _tAst_tAssgn_construct_(ast);
-		if (nde->dat.stmnt == NULL)
-		{
-			_tAstNde_destruct_(nde);
-			return NULL;
-		}
-	}
-	else if (ahd->type == eT_Eq ||
-		ahd->type == eT_AddEq ||
-		ahd->type == eT_SubEq ||
-		ahd->type == eT_MultEq ||
-		ahd->type == eT_DivEq ||
-		ahd->type == eT_LssLssEq ||
-		ahd->type == eT_GrtGrtEq ||
-		ahd->type == eT_BOrEq ||
-		ahd->type == eT_BAndEq ||
-		ahd->type == eT_BNotEq ||
-		ahd->type == eT_PrcntEq ||
-		ahd->type == eT_MultBOrEq)
-	{
-		nde->dat.stmnt = _tAst_tRssgn_construct_(ast);
-		if (nde->dat.stmnt == NULL)
-		{
-			_tAstNde_destruct_(nde);
-			return NULL;
-		}
+		nde = _tAst_tStmnt_construct_(ast);
+		return nde;
 	}
 	else
 	{
-		nde->dat.stmnt = _tAst_tExpr_construct_(ast);
-		if (nde->dat.stmnt == NULL)
+		struct _tTkn_ *ahd = _tAst_ahd_(ast, 0);
+		if (ahd == NULL)
 		{
 			_tAstNde_destruct_(nde);
 			return NULL;
 		}
+		else if (ahd->type == eT_Cln)
+		{
+			nde->dat.stmnt = _tAst_tAssgn_construct_(ast);
+			if (nde->dat.stmnt == NULL)
+			{
+				_tAstNde_destruct_(nde);
+				return NULL;
+			}
+		}
+		else if (ahd->type == eT_Eq ||
+			ahd->type == eT_AddEq ||
+			ahd->type == eT_SubEq ||
+			ahd->type == eT_MultEq ||
+			ahd->type == eT_DivEq ||
+			ahd->type == eT_LssLssEq ||
+			ahd->type == eT_GrtGrtEq ||
+			ahd->type == eT_BOrEq ||
+			ahd->type == eT_BAndEq ||
+			ahd->type == eT_BNotEq ||
+			ahd->type == eT_PrcntEq ||
+			ahd->type == eT_MultBOrEq)
+		{
+			nde->dat.stmnt = _tAst_tRssgn_construct_(ast);
+			if (nde->dat.stmnt == NULL)
+			{
+				_tAstNde_destruct_(nde);
+				return NULL;
+			}
+		}
+		else
+		{
+			nde->dat.stmnt = _tAst_tExpr_construct_(ast);
+			if (nde->dat.stmnt == NULL)
+			{
+				_tAstNde_destruct_(nde);
+				return NULL;
+			}
+		}
+		if (ast->crrnt->type != eT_Smicln)
+		{
+			_tAst_printErr_(ast, "Expected ';'", nde);
+			_tAstNde_destruct_(nde);
+			return NULL;
+		}
+		tAst_nxt_s(ast, nde);
 	}
-	if (ast->crrnt->type != eT_Smicln)
-	{
-		_tAst_printErr_(ast, "Expected ';'", NULL);
-		_tAstNde_destruct_(nde);
-		return NULL;
-	}
-	tAst_nxt_s(ast, nde);
 	return nde;
 }
 static bool _tStmntLst_addStmnt_(struct _tAstNde_ *nde, struct _tAstNde_ *chld)
@@ -1020,14 +1095,10 @@ static struct _tAstNde_ *_tAst_tStmntLst_construct_(tAst *ast)
 	if (nde == NULL) return NULL;
 	nde->type = eN_StmntLst;
 	nde->info = eNI_Err;
-	while (ast->idx < ast->tkns->lng && ast->crrnt->type != eT_RCrly)
+	while (ast->idx <= ast->tkns->lng && ast->crrnt->type != eT_RCrly)
 	{
 		struct _tAstNde_ *stmnt = _tAst_tStmnt_construct_(ast);
-		if (stmnt == NULL)
-		{
-			_tAstNde_destruct_(nde);
-			return NULL;
-		}
+		if (stmnt == NULL) return nde;
 		else if (_tStmntLst_addStmnt_(nde, stmnt))
 		{
 			_tAstNde_destruct_(stmnt);
@@ -1037,7 +1108,7 @@ static struct _tAstNde_ *_tAst_tStmntLst_construct_(tAst *ast)
 	}
 	return nde;
 }
-/*static struct _tAstNde_ *_tAst_tBlck_construct_(tAst *ast)
+static struct _tAstNde_ *_tAst_tBlck_construct_(tAst *ast)
 {
 	struct _tAstNde_ *nde = _tAstNde_construct_(ast);
 	if (nde == NULL) return NULL;
@@ -1064,7 +1135,7 @@ static struct _tAstNde_ *_tAst_tStmntLst_construct_(tAst *ast)
 	}
 	tAst_nxt_s(ast, nde);
 	return nde;
-}*/
+}
 bool _Ast_parse_(tAst *ast)
 {
 	if (_tAst_nxt_(ast))
@@ -1076,10 +1147,15 @@ bool _Ast_parse_(tAst *ast)
 	ast->rt = _tAst_tStmntLst_construct_(ast);
 	if (ast->rt == NULL)
 	{
+		_tAst_printErr_(ast, "Unexpected token", NULL);
 		_tAst_destruct_(ast);
 		return true;
 	}
-	else if (ast->tkns->lng >= ast->idx)
+	else if (ast->rt->dat.stmntLst.lng == 0LLU)
+	{
+		_tAst_destruct_(ast);
+	}
+	else if (ast->idx < ast->tkns->lng)
 	{
 		_tAst_printErr_(ast, "Unparsed tokens remaining", NULL);
 		_tAst_destruct_(ast);

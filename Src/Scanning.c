@@ -687,7 +687,7 @@ bool _tScnnr_parse_(tScnnr *scnnr)
 			return true;
 		}
 	}
-	_tTkns_print_(&scnnr->tkns);
+	//_tTkns_print_(&scnnr->tkns);
 	return false;
 }
 #undef tScnnr_addTkn_s
