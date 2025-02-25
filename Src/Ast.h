@@ -1,6 +1,11 @@
 #ifndef Ast_H_
 #define Ast_H_
 #include "Scanning.h"
+struct _tArrStr_
+{
+	char **strs;
+	long long unsigned cpcty, lng;
+};
 enum _eNd_
 {
 	eN_Err,
@@ -23,6 +28,8 @@ enum _eNd_
 	eN_Rssgn,
 	eN_Expr,
 	eN_Stmnt,
+	eN_StmntLst,
+	eN_Blck,
 };
 enum _eNdInfo_
 {
@@ -134,13 +141,19 @@ struct _tAstNde_
 			struct _tAstNde_ *fls;
 		}
 		trn;
+		struct _tStmntLst_
+		{
+			struct _tAstNde_ **stmnts;
+			long long unsigned cpcty, lng;
+		}
+		stmntLst;
+		struct _tBlck_
+		{
+			struct _tAstNde_ *stmnts;
+		}
+		blck;
 	}
 	dat;
-};
-struct _tArrStr_
-{
-	char **strs;
-	long long unsigned cpcty, len;
 };
 typedef struct
 {

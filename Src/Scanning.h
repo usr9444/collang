@@ -80,7 +80,7 @@ enum eTkns
 struct _tArrBffr_
 {
 	char *bffr;
-	long long unsigned cpcty, len;
+	long long unsigned cpcty, lng;
 };
 struct _tTkn_
 {
@@ -92,7 +92,7 @@ struct _tTkns_
 {
 	struct _tTkn_ *tkns;
 	long long unsigned cpcty;
-	long long unsigned len;
+	long long unsigned lng;
 };
 typedef struct
 {

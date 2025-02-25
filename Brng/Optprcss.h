@@ -139,7 +139,7 @@ typedef struct
 	char const *progNam;
 	_tCmdOpt *opts;
 	long long unsigned cpcty;
-	long long unsigned len;
+	long long unsigned lng;
 	_tUsgLl usg;
 	long long unsigned minArg;
 	long long unsigned argc;
@@ -149,7 +149,7 @@ typedef struct
 tOptPrcss;
 void _tOptPrcss_destruct_(tOptPrcss *optPrcss)
 {
-	for (long long unsigned idx = 0LLU; idx < optPrcss->len; ++idx)
+	for (long long unsigned idx = 0LLU; idx < optPrcss->lng; ++idx)
 	{
 		_tCmdOpt_destruct(optPrcss->opts[idx]);
 	}
@@ -159,7 +159,7 @@ void _tOptPrcss_destruct_(tOptPrcss *optPrcss)
 		optPrcss->opts = NULL;
 	}
 	optPrcss->cpcty = 0LLU;
-	optPrcss->len = 0LLU;
+	optPrcss->lng = 0LLU;
 	if (optPrcss->progNam != NULL)
 	{
 		free((void *)optPrcss->progNam);
@@ -207,7 +207,7 @@ void _tOptPrcss_addOpt_(tOptPrcss *optPrcss, char const *idntf, char const *dsc,
 			return;
 		}
 	}
-	else if (optPrcss->cpcty == optPrcss->len)
+	else if (optPrcss->cpcty == optPrcss->lng)
 	{
 		optPrcss->cpcty <<= 1LLU;
 		void *newPtr = realloc(optPrcss->opts, optPrcss->cpcty * sizeof(_tCmdOpt));
@@ -303,8 +303,8 @@ void _tOptPrcss_addOpt_(tOptPrcss *optPrcss, char const *idntf, char const *dsc,
 		_tCmdOpt_destruct(cmdOpt);
 		return;
 	}
-	optPrcss->opts[optPrcss->len] = cmdOpt;
-	++optPrcss->len;
+	optPrcss->opts[optPrcss->lng] = cmdOpt;
+	++optPrcss->lng;
 	if (req == 1)
 	{
 		optPrcss->minArg += argCnt + 1LLU;
@@ -313,7 +313,7 @@ void _tOptPrcss_addOpt_(tOptPrcss *optPrcss, char const *idntf, char const *dsc,
 #define tOptPrcss_addOpt(optPrcss, idntf, dsc, req, argCnt, datType, ...) _tOptPrcss_addOpt_(&optPrcss, idntf, dsc, req, argCnt, datType, __VA_ARGS__, NULL)
 tOptPrcss _tOptPrcss_construct_(char const *progNam, char const *usgs, ...)
 {
-	tOptPrcss optPrcss = (tOptPrcss){.progNam = NULL, .opts = NULL, .cpcty = 0LLU, .len = 0LLU, .usg = NULL, .minArg = 0LLU, .argc = 0LLU, .argv = NULL, .argCpcty = 0LLU};
+	tOptPrcss optPrcss = (tOptPrcss){.progNam = NULL, .opts = NULL, .cpcty = 0LLU, .lng = 0LLU, .usg = NULL, .minArg = 0LLU, .argc = 0LLU, .argv = NULL, .argCpcty = 0LLU};
 	optPrcss.progNam = calloc(strlen(progNam) + 1LLU, sizeof(char const));
 	if (optPrcss.progNam == NULL)
 	{
@@ -353,7 +353,7 @@ void _tOptPrcss_printUsage_(tOptPrcss *optPrcss)
 		}
 		tmpUsg = tmpUsg->nxt;
 	}
-	for (long long unsigned idx = 0LLU; idx < optPrcss->len; ++idx)
+	for (long long unsigned idx = 0LLU; idx < optPrcss->lng; ++idx)
 	{
 		printf("\t%s:\t%s", optPrcss->opts[idx].idntf, optPrcss->opts[idx].nam[0]);
 		for (long long unsigned jdx = 1LLU; jdx < optPrcss->opts[idx].namLen; ++jdx)
@@ -380,7 +380,7 @@ int _tOptPrcss_process_(tOptPrcss *optPrcss, int cnt, char *val[])
 	{
 		bool brk = 0;
 		long long unsigned optIdx = (long long unsigned) - 1;
-		for (long long unsigned jdx = 0LLU; jdx < optPrcss->len; ++jdx)
+		for (long long unsigned jdx = 0LLU; jdx < optPrcss->lng; ++jdx)
 		{
 			for (long long unsigned kdx = 0LLU; kdx < optPrcss->opts[jdx].namLen; ++kdx)
 			{
@@ -518,7 +518,7 @@ int _tOptPrcss_process_(tOptPrcss *optPrcss, int cnt, char *val[])
 #define tOptPrcss_process_s(optPrcss, argc, argv) do{long long unsigned err=tOptPrcss_process(optPrcss,argc,argv);if(err!=0LLU){tOptPrcss_destruct(optPrcss);return err;}}while(0)
 _tCmdOpt *_tOptPrcss_opt_(tOptPrcss *optPrcss, char const *idntf)
 {
-	for (long long unsigned idx = 0LLU; idx < optPrcss->len; ++idx)
+	for (long long unsigned idx = 0LLU; idx < optPrcss->lng; ++idx)
 	{
 		if (strcmp(optPrcss->opts[idx].idntf, idntf) == 0)
 		{

@@ -7,7 +7,7 @@ static struct _tArrBffr_ _tArrBffr_construct_(void)
 {
 	return (struct _tArrBffr_)
 	{
-		.bffr = NULL, .cpcty = 0LLU, .len = 0LLU
+		.bffr = NULL, .cpcty = 0LLU, .lng = 0LLU
 	};
 }
 static void _tArrBffr_destruct_(struct _tArrBffr_ *bffr)
@@ -19,7 +19,7 @@ static void _tArrBffr_destruct_(struct _tArrBffr_ *bffr)
 		bffr->bffr = NULL;
 	}
 	bffr->cpcty = 0LLU;
-	bffr->len = 0LLU;
+	bffr->lng = 0LLU;
 }
 static bool _tArrBffr_addCh_(struct _tArrBffr_ *bffr, char const ch)
 {
@@ -32,7 +32,7 @@ static bool _tArrBffr_addCh_(struct _tArrBffr_ *bffr, char const ch)
 			return true;
 		}
 	}
-	else if (bffr->len == bffr->cpcty)
+	else if (bffr->lng == bffr->cpcty)
 	{
 		char *newPtr = (char *)realloc(bffr->bffr, sizeof(char) * ((bffr->cpcty << 1) + 1));
 		if (newPtr == NULL)
@@ -43,22 +43,22 @@ static bool _tArrBffr_addCh_(struct _tArrBffr_ *bffr, char const ch)
 		bffr->bffr = newPtr;
 		bffr->cpcty <<= 1;
 	}
-	bffr->bffr[bffr->len++] = ch;
-	bffr->bffr[bffr->len] = '\0';
+	bffr->bffr[bffr->lng++] = ch;
+	bffr->bffr[bffr->lng] = '\0';
 	return false;
 }
 static struct _tTkns_ _tTkns_construct_(void)
 {
 	return (struct _tTkns_)
 	{
-		.tkns = NULL, .cpcty = 0LLU, .len = 0LLU
+		.tkns = NULL, .cpcty = 0LLU, .lng = 0LLU
 	};
 }
 static void _tTkns_destruct_(struct _tTkns_ *tkns)
 {
 	if (tkns->tkns != NULL)
 	{
-		for (long long unsigned idx = 0; idx < tkns->len; ++idx)
+		for (long long unsigned idx = 0; idx < tkns->lng; ++idx)
 		{
 			if (tkns->tkns[idx].bffr.cpcty != 0LLU)
 			{
@@ -71,7 +71,7 @@ static void _tTkns_destruct_(struct _tTkns_ *tkns)
 static bool _tTkns_addTkn_(struct _tTkns_ *tkns, enum eTkns type, long long unsigned const ln, long long unsigned const pos, struct _tArrBffr_ *bffr)
 {
 	struct _tTkn_ tkn = (struct _tTkn_){.pos = pos, .ln = ln, .type = type};
-	tkn.bffr = (struct _tArrBffr_){.bffr = NULL, .cpcty = 0LLU, .len = 0LLU};
+	tkn.bffr = (struct _tArrBffr_){.bffr = NULL, .cpcty = 0LLU, .lng = 0LLU};
 	if (bffr != NULL)
 	{
 		tkn.bffr = *bffr;
@@ -85,7 +85,7 @@ static bool _tTkns_addTkn_(struct _tTkns_ *tkns, enum eTkns type, long long unsi
 			return true;
 		}
 	}
-	else if (tkns->len == tkns->cpcty)
+	else if (tkns->lng == tkns->cpcty)
 	{
 		struct _tTkn_ *newPtr = (struct _tTkn_ *)realloc(tkns->tkns, sizeof(struct _tTkn_) * (tkns->cpcty << 1));
 		if (newPtr == NULL)
@@ -96,7 +96,7 @@ static bool _tTkns_addTkn_(struct _tTkns_ *tkns, enum eTkns type, long long unsi
 		tkns->tkns = newPtr;
 		tkns->cpcty <<= 1;
 	}
-	tkns->tkns[tkns->len++] = tkn;
+	tkns->tkns[tkns->lng++] = tkn;
 	return false;
 }
 tScnnr tScnnr_construct(char const *fileName, FILE *filePtr)
@@ -209,20 +209,20 @@ static bool _tScnnr_parseWord_(tScnnr *scnnr)
 		}
 	}
 	enum eTkns tknType = eT_Err;
-	if (strncmp(bffr.bffr, "and", (4 >= bffr.len) ? 4 : bffr.len) == 0) tknType = eT_And;
-	else if (strncmp(bffr.bffr, "for", (4 >= bffr.len) ? 4 : bffr.len) == 0) tknType = eT_For;
-	else if (strncmp(bffr.bffr, "or", (3 >= bffr.len) ? 3 : bffr.len) == 0) tknType = eT_Or;
-	else if (strncmp(bffr.bffr, "if", (3 >= bffr.len) ? 3 : bffr.len) == 0) tknType = eT_If;
-	else if (strncmp(bffr.bffr, "else", (5 >= bffr.len) ? 5 : bffr.len) == 0) tknType = eT_Else;
-	else if (strncmp(bffr.bffr, "while", (6 >= bffr.len) ? 6 : bffr.len) == 0) tknType = eT_While;
-	else if (strncmp(bffr.bffr, "ret", (4 >= bffr.len) ? 4 : bffr.len) == 0) tknType = eT_Ret;
-	else if (strncmp(bffr.bffr, "brk", (4 >= bffr.len) ? 4 : bffr.len) == 0) tknType = eT_Brk;
-	else if (strncmp(bffr.bffr, "None", (5 >= bffr.len) ? 5 : bffr.len) == 0) tknType = eT_None;
-	else if (strncmp(bffr.bffr, "True", (5 >= bffr.len) ? 5 : bffr.len) == 0) tknType = eT_True;
-	else if (strncmp(bffr.bffr, "False", (6 >= bffr.len) ? 6 : bffr.len) == 0) tknType = eT_False;
-	else if (strncmp(bffr.bffr, "fnc", (4 >= bffr.len) ? 4 : bffr.len) == 0) tknType = eT_Fnc;
-	else if (strncmp(bffr.bffr, "infr", (5 >= bffr.len) ? 5 : bffr.len) == 0) tknType = eT_Infr;
-	else if (strncmp(bffr.bffr, "rmbr", (5 >= bffr.len) ? 5 : bffr.len) == 0) tknType = eT_Rmbr;
+	if (strncmp(bffr.bffr, "and", (4 >= bffr.lng) ? 4 : bffr.lng) == 0) tknType = eT_And;
+	else if (strncmp(bffr.bffr, "for", (4 >= bffr.lng) ? 4 : bffr.lng) == 0) tknType = eT_For;
+	else if (strncmp(bffr.bffr, "or", (3 >= bffr.lng) ? 3 : bffr.lng) == 0) tknType = eT_Or;
+	else if (strncmp(bffr.bffr, "if", (3 >= bffr.lng) ? 3 : bffr.lng) == 0) tknType = eT_If;
+	else if (strncmp(bffr.bffr, "else", (5 >= bffr.lng) ? 5 : bffr.lng) == 0) tknType = eT_Else;
+	else if (strncmp(bffr.bffr, "while", (6 >= bffr.lng) ? 6 : bffr.lng) == 0) tknType = eT_While;
+	else if (strncmp(bffr.bffr, "ret", (4 >= bffr.lng) ? 4 : bffr.lng) == 0) tknType = eT_Ret;
+	else if (strncmp(bffr.bffr, "brk", (4 >= bffr.lng) ? 4 : bffr.lng) == 0) tknType = eT_Brk;
+	else if (strncmp(bffr.bffr, "None", (5 >= bffr.lng) ? 5 : bffr.lng) == 0) tknType = eT_None;
+	else if (strncmp(bffr.bffr, "True", (5 >= bffr.lng) ? 5 : bffr.lng) == 0) tknType = eT_True;
+	else if (strncmp(bffr.bffr, "False", (6 >= bffr.lng) ? 6 : bffr.lng) == 0) tknType = eT_False;
+	else if (strncmp(bffr.bffr, "fnc", (4 >= bffr.lng) ? 4 : bffr.lng) == 0) tknType = eT_Fnc;
+	else if (strncmp(bffr.bffr, "infr", (5 >= bffr.lng) ? 5 : bffr.lng) == 0) tknType = eT_Infr;
+	else if (strncmp(bffr.bffr, "rmbr", (5 >= bffr.lng) ? 5 : bffr.lng) == 0) tknType = eT_Rmbr;
 	else tknType = eT_Id;
 	if (tknType == eT_Id) return _tScnnr_addTkn_(scnnr, tknType, &bffr);
 	else
@@ -352,7 +352,7 @@ static bool _tScnnr_parseNum_(tScnnr *scnnr)
 	}
 	if (tknType == eT_Err)
 	{
-		if (bffr.len < 3) tknType = eT_B10;
+		if (bffr.lng < 3) tknType = eT_B10;
 		else if (bffr.bffr[0] == '0')
 		{
 			if (bffr.bffr[1] == 'H' || bffr.bffr[1] == 'h') tknType = eT_B16;
@@ -361,7 +361,7 @@ static bool _tScnnr_parseNum_(tScnnr *scnnr)
 			else tknType = eT_B10;
 		}
 	}
-	for (long long unsigned idx = (tknType == eT_B16 || tknType == eT_B8 || tknType == eT_B2) ? 2LLU : 0LLU; idx < bffr.len; ++idx)
+	for (long long unsigned idx = (tknType == eT_B16 || tknType == eT_B8 || tknType == eT_B2) ? 2LLU : 0LLU; idx < bffr.lng; ++idx)
 	{
 		if (tknType == eT_B2)
 		{
@@ -412,7 +412,7 @@ static bool _tScnnr_parseNum_(tScnnr *scnnr)
 		{
 			if (_isB10Digit_(bffr.bffr[idx]) == false && bffr.bffr[idx] != '.')
 			{
-				if ((idx == bffr.len - 1) && (bffr.bffr[idx] == 'F' || bffr.bffr[idx] == 'f')) continue;
+				if ((idx == bffr.lng - 1) && (bffr.bffr[idx] == 'F' || bffr.bffr[idx] == 'f')) continue;
 				_tScnnr_printErr_(scnnr, "Invalid digit (not of base 10) in floating point number");
 				_tArrBffr_destruct_(&bffr);
 				return true;
@@ -429,7 +429,7 @@ static bool _tScnnr_parseNum_(tScnnr *scnnr)
 }
 void _tTkns_print_(struct _tTkns_ *tkns)
 {
-	for (long long unsigned idx = 0; idx < tkns->len; ++idx)
+	for (long long unsigned idx = 0; idx < tkns->lng; ++idx)
 	{
 		if (tkns->tkns[idx].bffr.cpcty == 0) fprintf(stdout, "_tTkn_(%d, %llu, %llu)\n", tkns->tkns[idx].type, tkns->tkns[idx].ln, tkns->tkns[idx].pos);
 		else fprintf(stdout, "_tTkn_(%d, %llu, %llu, %s)\n", tkns->tkns[idx].type, tkns->tkns[idx].ln, tkns->tkns[idx].pos, tkns->tkns[idx].bffr.bffr);
