@@ -10,7 +10,9 @@ A programming language.
 Statement -> 		(Assignment | Reassignment | Expression) ";"
 Assignment -> 		IDENTIFIER ":" IDENTIFIER "=" Expression
 Reassignment -> 	IDENTIFIER ("=" | "+=" | "-=" | "*=" | "/=" | "<<=" | ">>=" | "|=" | "&=" | "~=" | "%=") Expression
-Expression -> 		BitwiseOr
+Expression -> 		Logical
+Logical ->			Relational (("and" | "or") Relational)*
+Relational ->		BitwiseOr (("<" | ">" | "<=" | ">=" | "==" | "!=") BitwiseOr)*
 BitwiseOr -> 		BitwiseXor ("|" BitwiseXor)*
 BitwiseXor -> 		BitwiseAnd ("*|" BitwiseAnd)*
 BitwiseAnd -> 		Shift ("&" Shift)*

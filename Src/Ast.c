@@ -101,6 +101,16 @@ static void _tAstNde_destruct_(struct _tAstNde_ *nde)
 		_tAstNde_destruct_(nde->dat.btws.lhs);
 		_tAstNde_destruct_(nde->dat.btws.rhs);
 	}
+	else if (nde->type == eN_Rltnl)
+	{
+		_tAstNde_destruct_(nde->dat.btws.lhs);
+		_tAstNde_destruct_(nde->dat.btws.rhs);
+	}
+	else if (nde->type == eN_Lgcl)
+	{
+		_tAstNde_destruct_(nde->dat.btws.lhs);
+		_tAstNde_destruct_(nde->dat.btws.rhs);
+	}
 	nde->info = eNI_Err;
 	nde->type = eN_Err;
 	nde->pos = 0LLU;
@@ -425,13 +435,80 @@ static struct _tAstNde_ *_tAst_tBOr_construct_(tAst *ast)
 	}
 	return nde;
 }
+static struct _tAstNde_ *_tAst_tRltnl_construct_(tAst *ast)
+{
+	struct _tAstNde_ *nde = _tAst_tBOr_construct_(ast);
+	if (nde == NULL) return NULL;
+	while (ast->crrnt->type == eT_Lss ||
+		ast->crrnt->type == eT_Grt ||
+		ast->crrnt->type == eT_LssEq ||
+		ast->crrnt->type == eT_GrtEq ||
+		ast->crrnt->type == eT_EqEq ||
+		ast->crrnt->type == eT_BngEq)
+	{
+		struct _tAstNde_ *tmp = _tAstNde_construct_(ast);
+		if (tmp == NULL) return NULL;
+		tmp->dat.btws.lhs = nde;
+		nde = tmp;
+		nde->type = eN_Rltnl;
+		if (ast->crrnt->type == eT_Lss) nde->info = eNI_Lss;
+		else if (ast->crrnt->type == eT_Grt) nde->info = eNI_Grt;
+		else if (ast->crrnt->type == eT_LssEq) nde->info = eNI_LssEq;
+		else if (ast->crrnt->type == eT_GrtEq) nde->info = eNI_GrtEq;
+		else if (ast->crrnt->type == eT_EqEq) nde->info = eNI_EqEq;
+		else if (ast->crrnt->type == eT_BngEq) nde->info = eNI_BngEq;
+		else
+		{
+			_tAst_printErr_(ast, "Invalid token", nde);
+			_tAstNde_destruct_(nde);
+			return NULL;
+		}
+		tAst_nxt_s(ast, nde);
+		nde->dat.btws.rhs = _tAst_tBOr_construct_(ast);
+		if (nde->dat.btws.rhs == NULL)
+		{
+			_tAstNde_destruct_(nde);
+			return NULL;
+		}
+	}
+	return nde;
+}
+static struct _tAstNde_ *_tAst_tLgcl_construct_(tAst *ast)
+{
+	struct _tAstNde_ *nde = _tAst_tRltnl_construct_(ast);
+	if (nde == NULL) return NULL;
+	while (ast->crrnt->type == eT_And || ast->crrnt->type == eT_Or)
+	{
+		struct _tAstNde_ *tmp = _tAstNde_construct_(ast);
+		if (tmp == NULL) return NULL;
+		tmp->dat.btws.lhs = nde;
+		nde = tmp;
+		nde->type = eN_Lgcl;
+		if (ast->crrnt->type == eT_And) nde->info = eNI_And;
+		else if (ast->crrnt->type == eT_Or) nde->info = eNI_Or;
+		else
+		{
+			_tAst_printErr_(ast, "Invalid token", nde);
+			_tAstNde_destruct_(nde);
+			return NULL;
+		}
+		tAst_nxt_s(ast, nde);
+		nde->dat.btws.rhs = _tAst_tRltnl_construct_(ast);
+		if (nde->dat.btws.rhs == NULL)
+		{
+			_tAstNde_destruct_(nde);
+			return NULL;
+		}
+	}
+	return nde;
+}
 static struct _tAstNde_ *_tAst_tExpr_construct_(tAst *ast)
 {
 	struct _tAstNde_ *nde = _tAstNde_construct_(ast);
 	if (nde == NULL) return NULL;
 	nde->type = eN_Expr;
 	nde->info = eNI_Err;
-	nde->dat.expr = _tAst_tBOr_construct_(ast);
+	nde->dat.expr = _tAst_tLgcl_construct_(ast);
 	if (nde->dat.expr == NULL)
 	{
 		_tAstNde_destruct_(nde);
@@ -719,6 +796,50 @@ void _tAst_print_(struct _tAstNde_ *nde, long long unsigned indnt)
 		break;
 	case eN_BOr:
 		printf("eN_BOr: |\n");
+		_tAst_print_(nde->dat.btws.lhs, indnt + 1LLU);
+		_tAst_print_(nde->dat.btws.rhs, indnt + 1LLU);
+		break;
+	case eN_Rltnl:
+		printf("eN_Rltnl: ");
+		switch (nde->info)
+		{
+		case eNI_Lss:
+			printf("<\n");
+			break;
+		case eNI_Grt:
+			printf(">\n");
+			break;
+		case eNI_LssEq:
+			printf("<=\n");
+			break;
+		case eNI_GrtEq:
+			printf(">=\n");
+			break;
+		case eNI_EqEq:
+			printf("==\n");
+			break;
+		case eNI_BngEq:
+			printf("!=\n");
+			break;
+		default:
+			printf("Unkown eN_Rltnl (%d)\n", nde->info);
+		}
+		_tAst_print_(nde->dat.btws.lhs, indnt + 1LLU);
+		_tAst_print_(nde->dat.btws.rhs, indnt + 1LLU);
+		break;
+	case eN_Lgcl:
+		printf("eN_Lgcl: ");
+		switch (nde->info)
+		{
+		case eNI_And:
+			printf("and\n");
+			break;
+		case eNI_Or:
+			printf("or\n");
+			break;
+		default:
+			printf("Unkown eN_Lgcl (%d)\n", nde->info);
+		}
 		_tAst_print_(nde->dat.btws.lhs, indnt + 1LLU);
 		_tAst_print_(nde->dat.btws.rhs, indnt + 1LLU);
 		break;

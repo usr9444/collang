@@ -15,6 +15,8 @@ enum _eNd_
 	eN_BAnd,
 	eN_BXor,
 	eN_BOr,
+	eN_Rltnl,
+	eN_Lgcl,
 	/*Expression*/
 	eN_Assgn,
 	eN_Rssgn,
@@ -43,6 +45,16 @@ enum _eNdInfo_
 	/*Bitwise*/
 	eNI_LShft,
 	eNI_RShft,
+	/*Relational*/
+	eNI_Lss,
+	eNI_Grt,
+	eNI_LssEq,
+	eNI_GrtEq,
+	eNI_EqEq,
+	eNI_BngEq,
+	/*Logical*/
+	eNI_And,
+	eNI_Or,
 	/*Assignments*/
 	eNI_Eq,
 	eNI_AddEq,
@@ -102,6 +114,18 @@ struct _tAstNde_
 			struct _tAstNde_ *rhs;
 		}
 		btws;
+		struct _tRltnl_
+		{
+			struct _tAstNde_ *lhs;
+			struct _tAstNde_ *rhs;
+		}
+		rltnl;
+		struct _tLgcl_
+		{
+			struct _tAstNde_ *lhs;
+			struct _tAstNde_ *rhs;
+		}
+		lgcl;
 	}
 	dat;
 };
