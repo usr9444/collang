@@ -3,6 +3,77 @@
 #include <stdlib.h>
 #include <string.h>
 #include "Scanning.h"
+char const *_eTkns_Lut_[] = {
+	"eT_Err",
+	"eT_LPrnth",
+	"eT_RPrnth",
+	"eT_LCrly",
+	"eT_RCrly",
+	"eT_LSqr",
+	"eT_RSqr",
+	"eT_Lss",
+	"eT_Grt",
+	"eT_Cmma",
+	"eT_Dot",
+	"eT_Add",
+	"eT_AddEq",
+	"eT_Sub",
+	"eT_SubEq",
+	"eT_Mult",
+	"eT_MultEq",
+	"eT_MultBOr",
+	"eT_MultBOrEq",
+	"eT_Div",
+	"eT_DivEq",
+	"eT_Smicln",
+	"eT_Cln",
+	"eT_Bng",
+	"eT_BngEq",
+	"eT_Eq",
+	"eT_EqEq",
+	"eT_LssEq",
+	"eT_LssLss",
+	"eT_LssLssEq",
+	"eT_GrtEq",
+	"eT_GrtGrt",
+	"eT_GrtGrtEq",
+	"eT_BOr",
+	"eT_BOrEq",
+	"eT_BAnd",
+	"eT_BAndEq",
+	"eT_BNot",
+	"eT_BNotEq",
+	"eT_Prcnt",
+	"eT_PrcntEq",
+	"eT_Qstn",
+	"eT_Crt",
+	"eT_At",
+	"eT_She",
+	"eT_Dlr",
+	"eT_BSlsh",
+	"eT_And",
+	"eT_Or",
+	"eT_If",
+	"eT_Else",
+	"eT_For",
+	"eT_While",
+	"eT_Ret",
+	"eT_Brk",
+	"eT_Fnc",
+	"eT_Infr",
+	"eT_Rmbr",
+	"eT_None",
+	"eT_True",
+	"eT_False",
+	"eT_Id",
+	"eT_Txt",
+	"eT_B2",
+	"eT_B8",
+	"eT_B10",
+	"eT_B16",
+	"eT_Flt",
+	"eT_Dbl",
+};
 static struct _tArrBffr_ _tArrBffr_construct_(void)
 {
 	return (struct _tArrBffr_)
@@ -68,7 +139,7 @@ static void _tTkns_destruct_(struct _tTkns_ *tkns)
 		free((void *)tkns->tkns);
 	}
 }
-static bool _tTkns_addTkn_(struct _tTkns_ *tkns, enum eTkns type, long long unsigned const ln, long long unsigned const pos, struct _tArrBffr_ *bffr)
+static bool _tTkns_addTkn_(struct _tTkns_ *tkns, enum _eTkns_ type, long long unsigned const ln, long long unsigned const pos, struct _tArrBffr_ *bffr)
 {
 	struct _tTkn_ tkn = (struct _tTkn_){.pos = pos, .ln = ln, .type = type};
 	tkn.bffr = (struct _tArrBffr_){.bffr = NULL, .cpcty = 0LLU, .lng = 0LLU};
@@ -120,7 +191,7 @@ static void _tScnnr_printErr_(tScnnr const *scnnr, char const *hnt)
 	fprintf(stderr, "Err: Failed while parsing token in file '%s' on line %llu at pos %llu (started at pos %llu).\n", scnnr->fileName, scnnr->ln, scnnr->crrnt, scnnr->strt);
 	if (hnt != NULL) fprintf(stderr, "Exp: %s.\n", hnt);
 }
-static bool _tScnnr_addTkn_(tScnnr *scnnr, enum eTkns type, struct _tArrBffr_ *bffr)
+static bool _tScnnr_addTkn_(tScnnr *scnnr, enum _eTkns_ type, struct _tArrBffr_ *bffr)
 {
 	bool err = _tTkns_addTkn_(&scnnr->tkns, type, scnnr->ln, scnnr->strt, bffr);
 	if (err != false) _tScnnr_printErr_(scnnr, "Could not allocate memory for token");
@@ -208,7 +279,7 @@ static bool _tScnnr_parseWord_(tScnnr *scnnr)
 			return err;
 		}
 	}
-	enum eTkns tknType = eT_Err;
+	enum _eTkns_ tknType = eT_Err;
 	if (strncmp(bffr.bffr, "and", (4 >= bffr.lng) ? 4 : bffr.lng) == 0) tknType = eT_And;
 	else if (strncmp(bffr.bffr, "for", (4 >= bffr.lng) ? 4 : bffr.lng) == 0) tknType = eT_For;
 	else if (strncmp(bffr.bffr, "or", (3 >= bffr.lng) ? 3 : bffr.lng) == 0) tknType = eT_Or;
@@ -316,7 +387,7 @@ static bool _tScnnr_parseNum_(tScnnr *scnnr)
 	//TODO(Me): Add exponents to base 10 integers and floats (maybe?).
 	struct _tArrBffr_ bffr = _tArrBffr_construct_();
 	bool hasDot = scnnr->ch == '.';
-	enum eTkns tknType = hasDot == true ? eT_Dbl : eT_Err;
+	enum _eTkns_ tknType = hasDot == true ? eT_Dbl : eT_Err;
 	bool err = _tArrBffr_addCh_(&bffr, scnnr->ch);
 	if (err != false)
 	{
@@ -440,7 +511,7 @@ bool _tScnnr_parse_(tScnnr *scnnr)
 	for (_tScnnr_nxt_(scnnr); scnnr->ch != EOF; _tScnnr_nxt_(scnnr))
 	{
 		scnnr->strt = scnnr->crrnt;
-		enum eTkns tknType = eT_Err;
+		enum _eTkns_ tknType = eT_Err;
 		if (scnnr->ch == '\n')
 		{
 			++scnnr->ln;

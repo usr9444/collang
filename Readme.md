@@ -10,9 +10,10 @@ A programming language.
 StatementList->		Statement*
 Conditional->		("if" | "while") Logical (Block | Statement)
 Block->				"{" StatementList "}"
-Statement-> 		(Assignment | Reassignment | Expression) ";"
+Statement-> 		(Declaration | Reassignment | Expression) ";"
 Expression-> 		TernaryConditional
-Assignment-> 		IDENTIFIER ":" IDENTIFIER "=" Expression
+Declaration-> 		IDENTIFIER ":" IDENTIFIER "=" Assignment
+Assignment->		Expression
 Reassignment-> 		IDENTIFIER ("=" | "+=" | "-=" | "*=" | "/=" | "<<=" | ">>=" | "|=" | "&=" | "~=" | "%=") Expression
 TernaryCondition->	Logical "?" Expression "," Expression
 Logical->			Relational (("and" | "or") Relational)*

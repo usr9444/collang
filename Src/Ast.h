@@ -24,6 +24,7 @@ enum _eNd_
 	eN_Lgcl,
 	/*Expression*/
 	eN_Trn,
+	eN_Dclr,
 	eN_Assgn,
 	eN_Rssgn,
 	eN_Expr,
@@ -33,15 +34,19 @@ enum _eNd_
 	eN_Blck,
 	eN_Cndtl,
 };
+extern char const *_eNd_Lut_[];
 enum _eNdInfo_
 {
-	eNI_Err,
+	eNI_None,
 	/*Constant types*/
 	eNI_Bln,
 	eNI_Int,
 	eNI_Flt,
 	eNI_Dbl,
 	eNI_Txt,
+	/*Identifiers*/
+	eNI_Vrbl,
+	eNI_Type,
 	/*Unary*/
 	eNI_Bng,
 	eNI_BNot,
@@ -82,6 +87,7 @@ enum _eNdInfo_
 	eNI_If,
 	eNI_While,
 };
+extern char const *_eNdInfo_Lut_[];
 struct _tAstNde_
 {
 	enum _eNd_ type;
@@ -91,8 +97,7 @@ struct _tAstNde_
 	{
 		struct _tArthmtc_
 		{
-			struct _tAstNde_ *lhs;
-			struct _tAstNde_ *rhs;
+			struct _tAstNde_ *lhs, *rhs;
 		}
 		arthmtc;
 		union _uConst_
@@ -105,13 +110,7 @@ struct _tAstNde_
 		}
 		cnst;
 		struct _tAstNde_ *expr;
-		struct _tAssgn_
-		{
-			struct _tAstNde_ *lhs;
-			struct _tAstNde_ *rhs;
-			char *datType;
-		}
-		assgn;
+		struct _tAstNde_ *assgn;
 		struct _tRssgn_
 		{
 			struct _tAstNde_ *lhs;
@@ -123,27 +122,22 @@ struct _tAstNde_
 		struct _tAstNde_ *unry;
 		struct _tBtws_
 		{
-			struct _tAstNde_ *lhs;
-			struct _tAstNde_ *rhs;
+			struct _tAstNde_ *lhs, *rhs;
 		}
 		btws;
 		struct _tRltnl_
 		{
-			struct _tAstNde_ *lhs;
-			struct _tAstNde_ *rhs;
+			struct _tAstNde_ *lhs, *rhs;
 		}
 		rltnl;
 		struct _tLgcl_
 		{
-			struct _tAstNde_ *lhs;
-			struct _tAstNde_ *rhs;
+			struct _tAstNde_ *lhs, *rhs;
 		}
 		lgcl;
 		struct _tTrn_
 		{
-			struct _tAstNde_ *cnd;
-			struct _tAstNde_ *tru;
-			struct _tAstNde_ *fls;
+			struct _tAstNde_ *cnd, *tru, *fls;
 		}
 		trn;
 		struct _tStmntLst_
@@ -159,10 +153,14 @@ struct _tAstNde_
 		blck;
 		struct _tCndtnl_
 		{
-			struct _tAstNde_ *cnd;
-			struct _tAstNde_ *stmntOrBlck;
+			struct _tAstNde_ *cnd, *stmntOrBlck;
 		}
 		cndtnl;
+		struct _tDclr_
+		{
+			struct _tAstNde_ *vrbl, *type, *val;
+		}
+		dclr;
 	}
 	dat;
 };
@@ -180,6 +178,6 @@ tAst _tAst_construct_(tScnnr *scnnr);
 #define tAst_construct(scnnr) _tAst_construct_(&scnnr)
 void _tAst_destruct_(tAst *ast);
 #define tAst_destruct(ast) _tAst_destruct_(&ast)
-bool _Ast_parse_(tAst *ast);
-#define tAst_parse(ast) _Ast_parse_(&ast)
+bool _tAst_parse_(tAst *ast);
+#define tAst_parse(ast) _tAst_parse_(&ast)
 #endif/*Ast_H_*/

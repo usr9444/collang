@@ -7,7 +7,81 @@ static struct _tAstNde_ *_tAst_tExpr_construct_(tAst *ast);
 static struct _tAstNde_ *_tAst_Prmry_construct_(tAst *ast);
 static struct _tAstNde_ *_tAst_tBlck_construct_(tAst *ast);
 static struct _tAstNde_ *_tAst_tStmnt_construct_(tAst *ast);
-void _tAst_print_(struct _tAstNde_ *nde, long long unsigned indnt)
+char const *_eNd_Lut_[] = {
+	"eN_Err",
+	"eN_Cnst",
+	"eN_Idntf",
+	"eN_Unry",
+	"eN_Multv",
+	"eN_Addtv",
+	"eN_BShft",
+	"eN_BAnd",
+	"eN_BXor",
+	"eN_BOr",
+	"eN_Rltnl",
+	"eN_Lgcl",
+	"eN_Trn",
+	"eN_Dclr",
+	"eN_Assgn",
+	"eN_Rssgn",
+	"eN_Expr",
+	"eN_Stmnt",
+	"eN_StmntLst",
+	"eN_Blck",
+	"eN_Cndtl",
+};
+char const *_eNdInfo_Lut_[] = {
+	"eNI_None",
+	/*Constant types*/
+	"eNI_Bln",
+	"eNI_Int",
+	"eNI_Flt",
+	"eNI_Dbl",
+	"eNI_Txt",
+	/*Identifiers*/
+	"eNI_Vrbl",
+	"eNI_Type",
+	/*Unary*/
+	"eNI_Bng",
+	"eNI_BNot",
+	/*Multiplicative*/
+	"eNI_Mult",
+	"eNI_Div",
+	"eNI_Prcnt",
+	/*Additive*/
+	"eNI_Add",
+	"eNI_Sub",
+	/*Bitwise*/
+	"eNI_LShft",
+	"eNI_RShft",
+	/*Relational*/
+	"eNI_Lss",
+	"eNI_Grt",
+	"eNI_LssEq",
+	"eNI_GrtEq",
+	"eNI_EqEq",
+	"eNI_BngEq",
+	/*Logical*/
+	"eNI_And",
+	"eNI_Or",
+	/*Assignments*/
+	"eNI_Eq",
+	"eNI_AddEq",
+	"eNI_SubEq",
+	"eNI_MultEq",
+	"eNI_DivEq",
+	"eNI_LssLssEq",
+	"eNI_GrtGrtEq",
+	"eNI_BOrEq",
+	"eNI_BAndEq",
+	"eNI_BNotEq",
+	"eNI_PrcntEq",
+	"eNI_BXorEq",
+	/*Flow control*/
+	"eNI_If",
+	"eNI_While",
+};
+void _tAst_print_(struct _tAstNde_ const *nde, long long unsigned indnt)
 {
 	if (nde == NULL) return;
 	for (long long unsigned idx = 0; idx < indnt; idx++) printf("\t");
@@ -187,9 +261,8 @@ void _tAst_print_(struct _tAstNde_ *nde, long long unsigned indnt)
 		printf(")\n");
 		break;
 	case eN_Assgn:
-		printf("eN_Assgn: %s =\n", nde->dat.assgn.datType);
-		_tAst_print_(nde->dat.assgn.lhs, indnt + 1LLU);
-		_tAst_print_(nde->dat.assgn.rhs, indnt + 1LLU);
+		printf("eN_Assgn: =\n");
+		_tAst_print_(nde->dat.assgn, indnt + 1LLU);
 		break;
 	case eN_Rssgn:
 		printf("eN_Rssgn: ");
@@ -232,14 +305,27 @@ void _tAst_print_(struct _tAstNde_ *nde, long long unsigned indnt)
 			printf("*|=\n");
 			break;
 		default:
-			printf("Unknown eN_Assgn (%d)\n", nde->info);
+			printf("Unknown eN_Rssgn (%d)\n", nde->info);
 			break;
 		}
-		_tAst_print_(nde->dat.assgn.lhs, indnt + 1LLU);
-		_tAst_print_(nde->dat.assgn.rhs, indnt + 1LLU);
+		_tAst_print_(nde->dat.rssgn.lhs, indnt + 1LLU);
+		_tAst_print_(nde->dat.rssgn.rhs, indnt + 1LLU);
 		break;
 	case eN_Idntf:
-		printf("eN_Idntf: %s\n", nde->dat.idntf);
+		printf("eN_Idntf: ");
+		switch (nde->info)
+		{
+		case eNI_Vrbl:
+			printf("(tVrbl) ");
+			break;
+		case eNI_Type:
+			printf("(tType) ");
+			break;
+		default:
+			printf("Unknown eN_Idntf (%d)\n", nde->info);
+			break;
+		}
+		printf("%s\n", nde->dat.idntf);
 		break;
 	case eN_Stmnt:
 		printf("eN_Stmnt:(\n");
@@ -275,6 +361,12 @@ void _tAst_print_(struct _tAstNde_ *nde, long long unsigned indnt)
 		_tAst_print_(nde->dat.blck.stmnts, indnt + 1LLU);
 		for (long long unsigned idx = 0; idx < indnt; idx++) printf("\t");
 		printf("}\n");
+		break;
+	case eN_Dclr:
+		printf("eN_Dclr:\n");
+		_tAst_print_(nde->dat.dclr.vrbl, indnt + 1LLU);
+		_tAst_print_(nde->dat.dclr.type, indnt + 1LLU);
+		_tAst_print_(nde->dat.dclr.val, indnt + 1LLU);
 		break;
 	case eN_Err:
 		fprintf(stderr, "Err: Unknown Ast node.\n");
@@ -348,11 +440,11 @@ static bool _tArrStr_addStr_(struct _tArrStr_ *strs, char const *txt)
 	strncpy(strs->strs[strs->lng++], txt, strLen);
 	return false;
 }
-static bool _tArrStr_srch_(struct _tArrStr_ *strs, char const *txt)
+/*static bool _tArrStr_srch_(struct _tArrStr_ *strs, char const *txt)
 {
 	for (long long unsigned idx = 0LLU; idx < strs->lng; ++idx) if (strcmp(strs->strs[idx], txt) == 0) return true;
 	return false;
-}
+}*/
 static void _tAstNde_destruct_(struct _tAstNde_ *nde)
 {
 	if (nde == NULL) return;
@@ -364,11 +456,11 @@ static void _tAstNde_destruct_(struct _tAstNde_ *nde)
 		_tAstNde_destruct_(nde->dat.arthmtc.rhs);
 	}
 	else if (nde->type == eN_Expr) _tAstNde_destruct_(nde->dat.expr);
-	else if (nde->type == eN_Assgn ||
-		nde->type == eN_Rssgn)
+	else if (nde->type == eN_Assgn) _tAstNde_destruct_(nde->dat.assgn);
+	else if (nde->type == eN_Rssgn)
 	{
-		_tAstNde_destruct_(nde->dat.assgn.lhs);
-		_tAstNde_destruct_(nde->dat.assgn.rhs);
+		_tAstNde_destruct_(nde->dat.rssgn.lhs);
+		_tAstNde_destruct_(nde->dat.rssgn.rhs);
 	}
 	else if (nde->type == eN_Idntf) nde->dat.idntf = NULL;
 	else if (nde->type == eN_Stmnt) _tAstNde_destruct_(nde->dat.stmnt);
@@ -404,7 +496,13 @@ static void _tAstNde_destruct_(struct _tAstNde_ *nde)
 		_tAstNde_destruct_(nde->dat.cndtnl.cnd);
 		_tAstNde_destruct_(nde->dat.cndtnl.stmntOrBlck);
 	}
-	nde->info = eNI_Err;
+	else if (nde->type == eN_Dclr)
+	{
+		_tAstNde_destruct_(nde->dat.dclr.type);
+		_tAstNde_destruct_(nde->dat.dclr.vrbl);
+		_tAstNde_destruct_(nde->dat.dclr.val);
+	}
+	nde->info = eNI_None;
 	nde->type = eN_Err;
 	nde->pos = 0LLU;
 	nde->ln = 0LLU;
@@ -442,10 +540,13 @@ void _tAst_destruct_(tAst *ast)
 }
 static void _tAst_printErr_(tAst const *ast, char const *hnt, struct _tAstNde_ const *nde)
 {
-	fprintf(stderr, "Err: Failed whilst building Ast in file '%s' on line %llu at pos %llu.\nTkn: Enumerated as token type '%d'", ast->fileName, ast->tkns->tkns[ast->idx % ast->tkns->lng].ln, ast->tkns->tkns[ast->idx % ast->tkns->lng].pos, ast->tkns->tkns[ast->idx % ast->tkns->lng].type);
-	if (nde == NULL) fprintf(stderr, ".\n");
-	else fprintf(stderr, " and enumerated as Ast node type '%d', '%d'.\n", nde->type, nde->info);
+	struct _tTkn_ const tkn = ast->tkns->tkns[ast->idx >= ast->tkns->lng ? ast->tkns->lng - 1 : ast->idx];
+	fprintf(stderr, "Err: Failed whilst building Ast for file '%s' on line %llu at pos %llu.\n", ast->fileName, tkn.ln, tkn.pos);
+	if (nde != NULL) fprintf(stderr, "Ast: '%s' (%d), '%s' (%d).\n", _eNd_Lut_[nde->type], nde->type, _eNdInfo_Lut_[nde->info], nde->info);
+	fprintf(stderr, "Tkn: '%s' (%d).\n", _eTkns_Lut_[tkn.type], tkn.type);
 	if (hnt != NULL) fprintf(stderr, "Exp: %s.\n", hnt);
+	fprintf(stderr, "Nde:");
+	_tAst_print_(nde, 1LLU);
 }
 static struct _tTkn_ *_tAst_ahd_(tAst *ast, long long unsigned offst)
 {
@@ -474,7 +575,7 @@ static struct _tAstNde_ *_tAst_tIdntf_construct_(tAst *ast)
 	struct _tAstNde_ *nde = _tAstNde_construct_(ast);
 	if (nde == NULL) return NULL;
 	nde->type = eN_Idntf;
-	nde->info = eNI_Err;
+	nde->info = eNI_Vrbl;
 	if (ast->crrnt->type == eT_Id) nde->dat.idntf = ast->crrnt->bffr.bffr;
 	else
 	{
@@ -529,7 +630,7 @@ static struct _tAstNde_ *_tAst_tUnry_construct_(tAst *ast)
 	struct _tAstNde_ *nde = _tAstNde_construct_(ast);
 	if (nde == NULL) return NULL;
 	nde->type = eN_Unry;
-	nde->info = eNI_Err;
+	nde->info = eNI_None;
 	if (ast->crrnt->type == eT_Add) nde->info = eNI_Add;
 	else if (ast->crrnt->type == eT_Sub) nde->info = eNI_Sub;
 	else if (ast->crrnt->type == eT_Bng) nde->info = eNI_Bng;
@@ -650,7 +751,7 @@ static struct _tAstNde_ *_tAst_tBAnd_construct_(tAst *ast)
 		tmp->dat.btws.lhs = nde;
 		nde = tmp;
 		nde->type = eN_BAnd;
-		if (ast->crrnt->type == eT_BAnd) nde->info = eNI_Err;
+		if (ast->crrnt->type == eT_BAnd) nde->info = eNI_None;
 		else
 		{
 			_tAst_printErr_(ast, "Invalid token", nde);
@@ -678,7 +779,7 @@ static struct _tAstNde_ *_tAst_tBXor_construct_(tAst *ast)
 		tmp->dat.btws.lhs = nde;
 		nde = tmp;
 		nde->type = eN_BXor;
-		if (ast->crrnt->type == eT_MultBOr) nde->info = eNI_Err;
+		if (ast->crrnt->type == eT_MultBOr) nde->info = eNI_None;
 		else
 		{
 			_tAst_printErr_(ast, "Invalid token", nde);
@@ -706,7 +807,7 @@ static struct _tAstNde_ *_tAst_tBOr_construct_(tAst *ast)
 		tmp->dat.btws.lhs = nde;
 		nde = tmp;
 		nde->type = eN_BOr;
-		if (ast->crrnt->type == eT_BOr) nde->info = eNI_Err;
+		if (ast->crrnt->type == eT_BOr) nde->info = eNI_None;
 		else
 		{
 			_tAst_printErr_(ast, "Invalid token", nde);
@@ -795,7 +896,7 @@ static struct _tAstNde_ *_tAst_tTrn_construct_(tAst *ast)
 	struct _tAstNde_ *nde = _tAstNde_construct_(ast);
 	if (nde == NULL) return NULL;
 	nde->type = eN_Trn;
-	nde->info = eNI_Err;
+	nde->info = eNI_None;
 	nde->dat.trn.cnd = _tAst_tLgcl_construct_(ast);
 	if (nde->dat.trn.cnd == NULL)
 	{
@@ -835,10 +936,11 @@ static struct _tAstNde_ *_tAst_tTrn_construct_(tAst *ast)
 }
 static struct _tAstNde_ *_tAst_tExpr_construct_(tAst *ast)
 {
+	return _tAst_tTrn_construct_(ast);
 	struct _tAstNde_ *nde = _tAstNde_construct_(ast);
 	if (nde == NULL) return NULL;
 	nde->type = eN_Expr;
-	nde->info = eNI_Err;
+	nde->info = eNI_None;
 	nde->dat.expr = _tAst_tTrn_construct_(ast);
 	if (nde->dat.expr == NULL)
 	{
@@ -870,45 +972,9 @@ static struct _tAstNde_ *_tAst_tAssgn_construct_(tAst *ast)
 	struct _tAstNde_ *nde = _tAstNde_construct_(ast);
 	if (nde == NULL) return NULL;
 	nde->type = eN_Assgn;
-	nde->info = eNI_Err;
-	nde->dat.assgn.lhs = _tAst_tIdntf_construct_(ast);
-	if (nde->dat.assgn.lhs == NULL)
-	{
-		_tAstNde_destruct_(nde);
-		return NULL;
-	}
-	else if (ast->crrnt->type != eT_Cln)
-	{
-		_tAst_printErr_(ast, "Expected ':'", nde);
-		_tAstNde_destruct_(nde);
-		return NULL;
-	}
-	tAst_nxt_s(ast, nde);
-	if (ast->crrnt->type == eT_Id) nde->dat.assgn.datType = ast->crrnt->bffr.bffr;
-	else if (ast->crrnt->type == eT_Infr) nde->dat.assgn.datType = NULL;
-	else
-	{
-		_tAst_printErr_(ast, "Expected identifier to denote variable type", nde);
-		_tAstNde_destruct_(nde);
-		return NULL;
-	}
-	if (_tArrStr_srch_(&ast->knwnTypes, ast->crrnt->bffr.bffr) == false)
-	{
-		_tAst_printErr_(ast, "Identifier is not a valid type", nde);
-		_tAstNde_destruct_(nde);
-		return NULL;
-	}
-	tAst_nxt_s(ast, nde);
-	if (ast->crrnt->type == eT_Eq) nde->info = eNI_Eq;
-	else
-	{
-		_tAst_printErr_(ast, "Unexpected token", nde);
-		_tAstNde_destruct_(nde);
-		return NULL;
-	}
-	tAst_nxt_s(ast, nde);
-	nde->dat.assgn.rhs = _tAst_tExpr_construct_(ast);
-	if (nde->dat.assgn.rhs == NULL)
+	nde->info = eNI_None;
+	nde->dat.assgn = _tAst_tExpr_construct_(ast);
+	if (nde->dat.assgn == NULL)
 	{
 		_tAstNde_destruct_(nde);
 		return NULL;
@@ -920,9 +986,9 @@ static struct _tAstNde_ *_tAst_tRssgn_construct_(tAst *ast)
 	struct _tAstNde_ *nde = _tAstNde_construct_(ast);
 	if (nde == NULL) return NULL;
 	nde->type = eN_Rssgn;
-	nde->info = eNI_Err;
-	nde->dat.assgn.lhs = _tAst_tIdntf_construct_(ast);
-	if (nde->dat.assgn.lhs == NULL)
+	nde->info = eNI_None;
+	nde->dat.rssgn.lhs = _tAst_tIdntf_construct_(ast);
+	if (nde->dat.rssgn.lhs == NULL)
 	{
 		_tAstNde_destruct_(nde);
 		return NULL;
@@ -946,13 +1012,64 @@ static struct _tAstNde_ *_tAst_tRssgn_construct_(tAst *ast)
 		return NULL;
 	}
 	tAst_nxt_s(ast, nde);
-	nde->dat.assgn.rhs = _tAst_tExpr_construct_(ast);
-	if (nde->dat.assgn.rhs == NULL)
+	nde->dat.rssgn.rhs = _tAst_tExpr_construct_(ast);
+	if (nde->dat.rssgn.rhs == NULL)
 	{
 		_tAstNde_destruct_(nde);
 		return NULL;
 	};
 	return nde;
+}
+static struct _tAstNde_ *_tAst_tDclr_construct_(tAst *ast)
+{
+	struct _tAstNde_ *nde = _tAstNde_construct_(ast);
+	if (nde == NULL) return NULL;
+	nde->type = eN_Dclr;
+	if (ast->crrnt->type != eT_Id)
+	{
+		_tAst_printErr_(ast, "Expected an identifier", nde);
+		_tAstNde_destruct_(nde);
+		return NULL;
+	}
+	nde->dat.dclr.vrbl = _tAst_tIdntf_construct_(ast);
+	if (nde->dat.dclr.vrbl == NULL)
+	{
+		_tAstNde_destruct_(nde);
+		return NULL;
+	}
+	if (ast->crrnt->type != eT_Cln)
+	{
+		_tAst_printErr_(ast, "Expected ':'", nde);
+		_tAstNde_destruct_(nde);
+		return NULL;
+	}
+	tAst_nxt_s(ast, nde);
+	nde->dat.dclr.type = _tAst_tIdntf_construct_(ast);
+	if (nde->dat.dclr.type == NULL)
+	{
+		_tAst_printErr_(ast, "Expected an identifier denoting variable type", nde);
+		_tAstNde_destruct_(nde);
+		return NULL;
+	}
+	nde->dat.dclr.type->info = eNI_Type;
+	if (ast->crrnt->type == eT_Smicln || ast->crrnt->type == eT_Cmma) return nde;
+	else if (ast->crrnt->type == eT_Eq)
+	{
+		tAst_nxt_s(ast, nde);
+		nde->dat.dclr.val = _tAst_tAssgn_construct_(ast);
+		if (nde->dat.dclr.val == NULL)
+		{
+			_tAstNde_destruct_(nde);
+			return NULL;
+		}
+		return nde;
+	}
+	else
+	{
+		_tAst_printErr_(ast, "Expected ';', '=' or ',' in variable declaration", nde);
+		_tAstNde_destruct_(nde);
+		return NULL;
+	}
 }
 static struct _tAstNde_ *_tAst_tCndtl_construct_(tAst *ast)
 {
@@ -989,7 +1106,7 @@ static struct _tAstNde_ *_tAst_tStmnt_construct_(tAst *ast)
 	struct _tAstNde_ *nde = _tAstNde_construct_(ast);
 	if (nde == NULL) return NULL;
 	nde->type = eN_Stmnt;
-	nde->info = eNI_Err;
+	nde->info = eNI_None;
 	if (ast->crrnt->type == eT_If || ast->crrnt->type == eT_While)
 	{
 		nde->dat.stmnt = _tAst_tCndtl_construct_(ast);
@@ -1016,7 +1133,7 @@ static struct _tAstNde_ *_tAst_tStmnt_construct_(tAst *ast)
 		}
 		else if (ahd->type == eT_Cln)
 		{
-			nde->dat.stmnt = _tAst_tAssgn_construct_(ast);
+			nde->dat.stmnt = _tAst_tDclr_construct_(ast);
 			if (nde->dat.stmnt == NULL)
 			{
 				_tAstNde_destruct_(nde);
@@ -1094,7 +1211,7 @@ static struct _tAstNde_ *_tAst_tStmntLst_construct_(tAst *ast)
 	struct _tAstNde_ *nde = _tAstNde_construct_(ast);
 	if (nde == NULL) return NULL;
 	nde->type = eN_StmntLst;
-	nde->info = eNI_Err;
+	nde->info = eNI_None;
 	while (ast->idx <= ast->tkns->lng && ast->crrnt->type != eT_RCrly)
 	{
 		struct _tAstNde_ *stmnt = _tAst_tStmnt_construct_(ast);
@@ -1120,7 +1237,7 @@ static struct _tAstNde_ *_tAst_tBlck_construct_(tAst *ast)
 	}
 	tAst_nxt_s(ast, nde);
 	nde->type = eN_Blck;
-	nde->info = eNI_Err;
+	nde->info = eNI_None;
 	nde->dat.blck.stmnts = _tAst_tStmntLst_construct_(ast);
 	if (nde->dat.blck.stmnts == NULL)
 	{
@@ -1136,7 +1253,7 @@ static struct _tAstNde_ *_tAst_tBlck_construct_(tAst *ast)
 	tAst_nxt_s(ast, nde);
 	return nde;
 }
-bool _Ast_parse_(tAst *ast)
+bool _tAst_parse_(tAst *ast)
 {
 	if (_tAst_nxt_(ast))
 	{
@@ -1151,10 +1268,7 @@ bool _Ast_parse_(tAst *ast)
 		_tAst_destruct_(ast);
 		return true;
 	}
-	else if (ast->rt->dat.stmntLst.lng == 0LLU)
-	{
-		_tAst_destruct_(ast);
-	}
+	else if (ast->rt->dat.stmntLst.lng == 0LLU) _tAst_destruct_(ast);
 	else if (ast->idx < ast->tkns->lng)
 	{
 		_tAst_printErr_(ast, "Unparsed tokens remaining", NULL);

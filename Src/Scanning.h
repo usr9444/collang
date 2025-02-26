@@ -1,7 +1,7 @@
 #ifndef Scanning_H_
 #define Scanning_H_
 #include <stdio.h>
-enum eTkns
+enum _eTkns_
 {
 	eT_Err,
 	/*Brackets*/
@@ -77,6 +77,7 @@ enum eTkns
 	eT_Flt,		// <?>.<?>F	e.g. 1.0F
 	eT_Dbl,		// <?>.<?>	e.g. 1.0
 };
+extern char const *_eTkns_Lut_[];
 struct _tArrBffr_
 {
 	char *bffr;
@@ -84,7 +85,7 @@ struct _tArrBffr_
 };
 struct _tTkn_
 {
-	enum eTkns type;
+	enum _eTkns_ type;
 	long long unsigned ln, pos;
 	struct _tArrBffr_ bffr;
 };
